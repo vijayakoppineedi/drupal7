@@ -1,0 +1,16 @@
+name = Apache Solr Local Files
+description = Search files in a local/network shared folder and sends to Apache Solr to extract data with Apache Tika and index them
+core = 7.x
+package = Apache Solr
+version = 7.x
+dependencies[] = apachesolr
+dependencies[] = apachesolr_search
+dependencies[] = ctools
+dependencies[] = facetapi
+dependencies[] = transliteration
+; Information added on 2015-05-04
+version = "7.x"
+core = "7.x"
+project = "apachesolr_localfiles"
+datestamp = "1430768014"
+

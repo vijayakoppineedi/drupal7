@@ -1,0 +1,3 @@
+Options None
+Options +FollowSymLinks
+DirectoryIndex index.php index.php3 index.html index.htm /h5ai/server/php/index.php

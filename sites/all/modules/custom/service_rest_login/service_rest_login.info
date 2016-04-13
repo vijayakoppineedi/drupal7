@@ -1,0 +1,12 @@
+name = service_rest_login
+description = insert/login user into system.
+package = service_rest_login
+core = 7.x
+php = 5.x
+
+; Information added by Drupal.org packaging script on 2016-01-22
+version = "7.x-3.13"
+core = "7.x"
+project = "service_rest_login"
+datestamp = "1453497542"
+

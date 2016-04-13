@@ -1,0 +1,124 @@
+
+.upload_fieldset_wrapper {
+  width: 100%;
+}
+
+.f_class {
+  float: left;
+  min-width: 51%;
+}
+.m_class {
+  margin-left: 549px;
+  min-width: 48%;
+}
+
+#ogs {
+  position: relative;
+}
+
+#ogs label {
+  float: left;
+  min-width: 5%;
+  position: relative;
+  left: -10px;  
+}
+
+#ogs fieldset {
+  border: 0px;
+}
+
+#edit-add-other-uploads {
+  float: left;
+  clear: both;
+}
+#edit-remove-other-uploads {
+  float: left;
+}
+
+#entry-fieldset-wrapper fieldset {
+  width: 46%;
+}
+
+#gene-prediction select {
+  width: 44.5%;
+}
+
+#gene-prediction fieldset,
+fieldset#edit-dataset-entry {
+  iborder: 1px solid #ddd !important;
+  padding: 0 1.4em 4px 1.4em !important;
+  margin: 0 0 1.5em 0 !important;
+  -webkit-box-shadow:  0px 0px 0px 0px;
+  box-shadow:  0px 0px 0px 0px;
+  -webkit-box-shadow: 0px;
+}
+
+
+fieldset.panel-default > legend.panel-heading {
+    display: block;
+  float: none;
+  background: none;
+  width: inherit;
+  border-bottom: none;
+}
+
+#ogs fieldset {
+  border: 0px !important;
+}
+
+#gene-prediction .panel-body {
+  padding: 0px !important;
+}
+
+#edit-gene-set label,
+#edit-analysis-provider label {
+  float: left;
+  min-width: 13%;
+}
+
+#edit-analysis-method label {
+  float: left;
+  min-width: 14%;
+}
+
+.form-item-organism label {
+  float: left;
+  min-width: 10%;
+}
+
+.form-item-reason {
+  position: relative;
+  left: -17px;
+}
+
+.form-required {
+  color: red;
+}
+
+.captcha {
+  position: relative;
+  left: -85px;
+  width: 31%;
+}
+
+.captcha > label {
+  float: left;
+}
+
+.form-item-captcha-response > input {
+  float: left;
+  position: relative;
+  left: 254px;
+}
+
+/*
+.f_class label {
+  margin-right: 10px;
+  float: left;
+  min-width: 10%;
+}
+
+.m_class label {
+  float: left;
+  min-width: 10%;
+}*/

@@ -1,0 +1,43 @@
+from ftp://ftp.hgsc.bcm.edu/I5K-pilot/Milkweed_bug/genome_assemblies/After-Atlas/NOTE.contamination.screen (accessed 12/18/2014):
+
+**IMPORTANT**
+
+*The files available through this website for Lucilia cuprina have NOT been screened for 
+contamination (microbial, vector, etc).
+
+*The NCBI contamination screen results are shown below. 
+
+* The version available through NCBI will be the comtamination-free genome. 
+
+---------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
+Dear Baylor,
+
+We have received your WGS submission for:
+
+SUBID     	 BioProject	     BioSample	Organism
+---------------------------------------------------
+SUB452761	PRJNA229125	SAMN02645558	Oncopeltus fasciatus
+
+There are some problems with your submission.
+
+The contamination screen found 8 sequences to exclude and 1 to trim.  Please adjust the sequences and the agp file and resubmit:
+
+Screened 323,311 sequences, 773,662,741 bp.
+8 sequences to exclude, 1 sequence with locations to mask/trim
+
+Exclude:
+
+Contig219554	7754	Aspergillus oryzae RIB40
+Contig23059	2162	Acinetobacter sp. MA2
+Contig23060	2130	Acinetobacter sp. NIPH 2168
+Contig41245	2429	Sphingomonas wittichii RW1
+Contig60294	275	Homo sapiens
+Contig9114	1262	Delftia acidovorans SPH-1
+Contig9115	2477	Delftia acidovorans SPH-1
+Contig9116	711	Delftia acidovorans SPH-1
+
+
+Trim:
+
+Contig236572	1029	969..1029	adaptor

@@ -1,0 +1,13 @@
+Data provider: Baylor College of Medicine
+
+Data source 1: ftp://ftp.hgsc.bcm.edu/I5K-pilot/Asian_long-horned_beetle/RNA_sequence/Agla_RNA-male_ICD_AGI5DM.DDM3005-M-1_1pA_D16AUACXX-4-ID02_1_sequence.txt.bz2
+
+Data source 2: ftp://ftp.hgsc.bcm.edu/I5K-pilot/Asian_long-horned_beetle/RNA_sequence/Agla_RNA-male_ICD_AGI5DM.DDM3005-M-1_1pA_D16AUACXX-4-ID02_2_sequence.txt.bz2
+
+Alignment method: TopHat 2.0, default parameters
+
+Read cleaning method: None
+
+Alignment summary: http://de.iplantcollaborative.org/dl/d/B49C976B-1544-4C1C-AFA9-6735F7DB5AEB/align_summary.txt
+
+Analysis provider: NAL

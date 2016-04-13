@@ -1,0 +1,319 @@
+.cordinator_info label {
+  float: left;
+  min-width: 12.5%;
+}
+
+.project label {
+  float: left;
+  min-width: 12.5%;
+}
+
+.project .form-item-description label,
+.project .form-item-organism-image-url label {
+  float: left;
+  min-width: 28%;
+}
+
+fieldset.project select,
+fieldset.assembly select {
+  width: 20%;
+}
+
+#species {
+/*  float: left;
+  margin-left: 368px;
+  margin-top: -38px;*/
+  min-width: 65%;
+  position: relative;
+}
+
+#species label {
+  min-width: 12.5%;
+}
+
+.form-item-is-portal label
+ {
+  float:left;
+  min-width: 37%;
+  clear: both;
+}
+.form-item-is-curate-assembly label {
+  float:left;
+  min-width: 43%;
+  clear: both;
+}
+
+#portal {
+  /*margin-left: 34%; 
+  margin-top: -3%;*/
+  float: left;  
+  clear: both;
+  width: 100%;  
+}
+
+#portal label {
+  float: left;
+  width: 40.5%; 
+  position: relative;
+}
+
+.form-item-assembly-accession label,
+.form-item-assembly-method label,
+.form-item-assembly-version label,
+.form-item-is-publish label,
+.form-item-manual-curation-email label,
+.form-item-publish-field-data label  {
+  clear: both;
+}
+
+.form-item-is-curate-assembly select {
+  float: left;
+}
+
+.assembly-data #manual_curation fieldset {
+  border: 0px;
+}
+
+#manual_curation {
+  float: left;
+  clear: both;
+  min-width: 56%;
+  position: relative;
+}
+
+.manual_curation  label {
+  float: left;
+/*  width: 19%;*/
+}
+
+.project_info  label {
+  float: left;
+  min-width: 28%;
+}
+
+.form-item-organism-image label {
+  float: left;
+  min-width: 22%;  
+	
+}
+
+.assembly  label {
+  float: left;
+  width: 19%;
+}
+
+#assembly_publish {
+  position: relative;
+  clear: both;
+}
+
+.assembly #assembly_publish fieldset {
+  border: 0px;
+}
+.assembly  .form-item-data-source-url {
+  clear: both;
+}
+
+#manual_curation .form-item-need-assistance label {
+  float: left;
+  min-width: 51%;
+}
+
+#manual_curation .form-item-time-from label {
+  float: left;
+  min-width: 60%;
+}
+
+#manual_curation .form-item-time-to {
+  float: left;
+  margin-top: -53px;
+  margin-left: 255px;
+  position: relative;
+  z-index: 1000;
+}
+
+#manual_curation .form-item-time-to label span {
+  display: none;
+}
+
+#portal > fieldset.panel,
+#species fieldset.panel,
+#name_email fieldset.panel,
+#assistance fieldset.panel,
+#manual_curation fieldset.panel,
+#edit-assembly fieldset.panel {
+  border: 0px;
+  -webkit-box-shadow: 0 0px 0px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0px !important;
+}
+#manual_curation #assistance fieldset {
+  border: 0px;
+}
+
+#manual_curation .form-item-is-same label{
+  float: left;
+  width: 54%;
+  font-weight: bold;
+}
+
+#manual_curation #name_email {
+  clear: both;
+}
+
+#name_email fieldset,
+#manual_curation fieldset {
+  border: 0px;
+}
+
+.gender_wrapper {
+  min-width: 100%;
+}
+.gender_wrapper .form-item-gender {
+  min-width: 43%;
+}
+.gender_wrapper label {
+  margin-right: 19%;
+}
+
+#gender_textfield label {  
+  float: left;
+  position: relative;
+  width: 17%;
+}
+
+#gender_textfield fieldset {
+  border: 0;
+}
+
+.upload_fieldset_wrapper {
+  width: 100%;
+}
+
+.f_class {
+  float: left;
+  min-width: 51%;
+}
+.m_class {
+  margin-left: 549px;
+  min-width: 48%;
+}
+
+.captcha {
+  position: relative;
+  left: -85px;
+  width: 31%;
+}
+
+.captcha > label {
+  float: left;
+}
+
+.form-item-captcha-response > input {
+  float: left;
+  position: relative;
+  left: 254px;
+}
+
+
+fieldset.captcha {
+  border: 0px;
+}
+
+#edit-add-other-uploads {
+  float: left;
+  clear: both;
+}
+#edit-remove-other-uploads {
+  float: left;
+}
+
+#name_email {
+  width: 110%;
+}
+
+#name_email label {
+  width: 26%;
+}
+
+.form-textarea-wrapper #edit-description {
+  width: 30%;
+}
+
+.form-item-description .form-textarea-wrapper .grippie {
+  display: none;
+}
+
+#upload-fieldset-wrapper .form-submit {
+  float: left;
+}
+
+fieldset.cordinator_info,
+fieldset.project,
+fieldset.project_info,
+fieldset.assembly,
+fieldset.assembly_data_source,
+fieldset.aa_information,
+#edit-assembly > fieldset  {
+  border: 1px solid #ddd !important;
+  padding: 0 1.4em 4px 1.4em !important;
+  margin: 0 0 1.5em 0 !important;
+  -webkit-box-shadow:  0px 0px 0px 0px;
+  box-shadow:  0px 0px 0px 0px;
+  -webkit-box-shadow: 0px;
+}
+
+#upload-fieldset-wrapper fieldset {
+  border: 1px solid #ddd !important;
+  padding: 0 1.4em 4px 1.4em !important;
+}
+
+#gender_textfield > fieldset {
+  border: 0px !important;
+}
+
+fieldset.panel-default > legend.panel-heading {
+    display: block;
+  float: none;
+  background: none;
+  width: inherit;
+  border-bottom: none;
+}
+
+
+fieldset.cordinator > legend {
+   width: inherit;
+   padding: 0 10px;
+   border-bottom: none;
+    font-size: 1.2em !important;
+    font-weight: bold !important;
+    text-align: left !important;
+
+}
+
+div.container-inline-date .form-item-time-to-date {
+  margin-top: -8px;
+}
+
+div.container-inline-date .form-item-time-to-date > input {
+  clear: both;
+}
+
+
+#assembly-data fieldset.panel {
+  border: 0px;
+  box-shadow: 0px !important;
+  -webkit-box-shadow: 0px !important;
+}
+
+#assembly-data .panel-body {
+  padding: 0px !important;
+}
+
+.form-required {
+  color: red;
+}
+
+#assembly_files_markup {
+  font-family: Arial, sans-serif;
+  font-weight: 600;
+}

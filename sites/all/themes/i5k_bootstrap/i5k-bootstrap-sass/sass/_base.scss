@@ -1,0 +1,8 @@
+@mixin colorize($image, $color, $opacity) {
+      background: $color;
+      $color: transparentize($color, 1 - $opacity);
+      background: -webkit-linear-gradient(left, $color, $color), url($image); 
+      background: -moz-linear-gradient(left, $color, $color), url($image); 
+      background: -ms-linear-gradient(left, $color, $color), url($image); 
+      background: -o-linear-gradient(left, $color, $color), url($image); 
+}

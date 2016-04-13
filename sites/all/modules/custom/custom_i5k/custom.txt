@@ -1,0 +1,1031 @@
+<?php
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function custom_i5k_menu() {
+  $items['statistics'] = array(
+    'title' => 'Statistics',
+    'page callback' => 'get_statistics',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['annotations/%'] = array(
+    'title callback' => 'annotation_page_title',
+	'title arguments' => array(1),
+    'page callback' => 'show_annotations',
+	'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['community_contact/%'] = array(
+    'title' => 'Community contact address',	
+    'page callback' => 'get_community_contact_emailid',
+	'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  
+  $items['detail_transcript/%'] = array(
+    'title' => 'Detailed transcript view',	
+    'page callback' => 'detailed_transcript_view',
+	'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['zclip/%'] = array(
+    'title' => 'Zclip',	
+    'page callback' => 'zclip_data',	
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  return $items;
+}
+
+
+
+/**
+ *  Retrieving the emailid for the selected community contact on the organism page.
+ *  @params $nid
+ *  $nid looks like  85492D0, 85492D1 etcs., so exploding the nid and delta value 
+ */
+function get_community_contact_emailid($nid) {
+  //
+  $cid = explode("D", $nid);
+  $node_id = $cid[0];
+  $delta = $cid[1];  
+  
+  $result = db_select('field_data_field_community_contact', 'c')
+         ->fields('c', array('field_community_contact_value'))
+         ->condition('entity_id', $node_id)
+         ->condition('delta', $delta)
+         ->execute()
+         ->fetch();
+  $emailid = '';		 
+  
+  if(!empty($result->field_community_contact_value)) {
+    $contact_value = explode("|", $result->field_community_contact_value);
+    $emailid = !empty($contact_value[1])?$contact_value[1]:'';    
+  } 		 
+
+  drupal_json_output($emailid);
+  exit;
+}
+
+
+/**
+ *  Redirecting to home page after user login.
+ */
+function custom_i5k_user_login(&$edit, $account) {
+  if (!isset($_POST['form_id']) || $_POST['form_id'] != 'user_pass_reset') {
+    if(in_array('authenticated user', $account->roles)) {
+      $_GET['destination'] = 'home';
+    }
+  }
+} 
+
+
+/**
+ * Pull the statistics from the json file
+ */
+ 
+function get_statistics() {
+  $content = '';
+   drupal_add_js(drupal_get_path('theme', 'i5k') .'/js/jquery.metadata.js');
+  drupal_add_js(drupal_get_path('theme', 'i5k') .'/js/jquery.tablesorter.min.js');
+  $js_path = drupal_get_path('module', 'custom_i5k').'/theme/js/stat.js';
+
+  $content .= '<div id="stat"></div>';
+  drupal_add_js($js_path);
+
+
+  return $content;
+}
+
+/**
+ * Implements hook_views_api()
+ */
+function custom_i5k_views_api() {
+  return array(
+      "version" => "3.0",
+	   'path' => drupal_get_path('module', 'custom_i5k'),
+	  );
+}
+
+
+/**
+ * Implements hook_views_data_alter()
+ */
+function custom_i5k_views_data_alter(&$data) {
+  $data['feature']['timeaccessioned'] = array(
+    'title' => t('timeaccession with datetime...'),
+    'help' => t('Convert datetime format to long format'),
+    'field' => array(	   
+      'handler' => 'custom_i5k_handler_field_datetime',	  
+    ),
+	'filter' => Array
+       (
+         'handler' => 'views_handler_filter_date',
+         'name' => 'views_handler_filter_date'
+       ),
+    'sort' => Array
+       (
+         'handler' => 'views_handler_sort_date',
+         'name' => 'views_handler_sort_date'
+       )
+  );  
+}
+
+class custom_i5k_handler_field_datetime extends views_handler_field_date {
+  function render($values) {
+    // Convert the stored datetime text string into a unix timestamp, as this is what the
+    // regular unix timestamp formatter is expecting. 
+	
+    $values->{$this->field_alias} = strToTime($values->{$this->field_alias});
+	
+    // Render the date using the normal date handler
+    return parent::render($values);
+  }
+}
+
+/**
+ *  hook_form_alter - Arranging the fields in an order for the organism content type.
+ */ 
+function custom_i5k_form_alter(&$form, &$form_state, $form_id) {
+  if($form_id == 'chado_organism_node_form') {
+    $form['menu']['#weight'] = -100;
+    $form['genus']['#weight'] = -99;
+    $form['species']['#weight'] = -98;
+    $form['abbreviation']['#weight'] = -97;
+    $form['common_name']['#weight'] = -96;
+    $form['description']['#weight'] = -95;
+    $form['organism_image']['#weight'] = -94;
+    $form['field_organism_image']['#weight'] = -93;
+    $form['field_resource_titles']['#weight'] = -92;
+    $form['field_resource_links']['#weight'] = -91;
+    $form['field_resource_blocks']['#weight'] = -90;
+    $form['revision_information']['#weight'] = -89;
+    $form['path']['#weight'] = -88;
+    $form['comment_settings']['#weight'] = -87;
+    $form['attachment']['#weight'] = -86;
+    $form['author']['#weight'] = -85;
+    $form['options']['#weight'] = -84;	
+	
+    // Making organism image field disable
+    $form['organism_image']['#disabled'] = TRUE;	
+  } else if($form_id == 'tripal_feature_gff3_load_form') {    
+    $form['gff_file']['#maxlength'] = 256;	
+  } else if($form_id == 'contact_site_form') {
+    $form['#validate'][] = 'custom_contact_form_validate';
+  } else if($form_id == 'user_pass') {    
+	$form = Array();
+	form_set_error("", "Access Denied.");
+  }  
+
+ return $form; 
+}
+
+/**
+ *  Contact form validation
+ */
+function custom_contact_form_validate($form, &$form_state) {
+   //Automated emails that include reference to .[/url]. or .[/link]. will be rejected by the mail processing
+   $msg = $form_state['input']['message'] ;
+   $pos = strpos($msg, "[/url]") ;
+   if ($pos !== false) {
+     form_set_error('message', t('Due to spam problems, you may not include [url] tags in your email.'));
+   }
+   $pos = strpos($msg, "[/link]") ;
+   if ($pos !== false) {
+     form_set_error('message', t('Due to spam problems, you may not include [link] tags in your email.'));
+   }
+   
+   //Character validation
+    $firstname = $form_state['input']['name']; 
+    if (!preg_match('!^[\w @-]*$!', $firstname)){ 
+       form_set_error('name', t('Your Name can only contains numbers, letters @  - _.'));
+     }
+   //Subject validation
+    $subject =  $form_state['input']['subject'];
+    if (!preg_match("!^[\w @-]*$!", $subject) ) {
+      form_set_error('subject', t('Subject can only contains numbers, letters @  - _.'));
+    }
+
+}
+
+/**
+ * Implementation of hook_block()
+ * Species statistics - Showing top news on the block region with more link.
+ */
+
+function custom_i5k_block_info() {
+  $blocks['statistics'] = array(
+    'info' => t('Statistics'),
+	'status' => TRUE,
+    'region' => 'sidebar_second',
+    // DRUPAL_CACHE_PER_ROLE will be assumed.
+  );
+  
+  $blocks['filedata_index'] = array(
+    'info' => t('File data indexing'),
+    'status' => TRUE,
+    'region' => 'sidebar_second',
+   'cache' => DRUPAL_NO_CACHE,
+    // DRUPAL_CACHE_PER_ROLE will be assumed.
+  );
+
+  return $blocks;
+} 
+
+/**
+ * Implements hook_block_view().
+ *
+ * This hook generates the contents of the blocks themselves.
+ */
+function custom_i5k_block_view($delta = '') {
+  // The $delta parameter tells us which block is being requested.
+  $block = array();
+  switch ($delta) {   
+    case 'statistics':
+      $block['subject'] = t('Manual annotation statistics');      
+      $js_path = drupal_get_path('module', 'custom_i5k').'/theme/js/home.js';	  
+      $content = '<div id="stats"> 
+                    <table style="border: none; width: 100%; text-align:center;">
+                      <tr>
+                        <td style="border: none; width: 50%; font-size: 150%;"><span id="total-annotations"></span></td>
+                        <td style="border: none; width: 50%; font-size: 150%;"><span id="over-species"></span></td>
+                      </tr>
+                      <tr><td style="border: none; width: 50%;">annotations</td><td style="border: none; width: 50%;">species</td></tr>
+                    </table>
+                    <table id="recently-annotations">
+                      <tr><th>Species</th><th># of annotations</th><th>Last modified</th></tr>
+                    </table>
+                  </div>
+                 <div class="more-link"><span class="icon">&nbsp;</span><a href="/statistics">MORE</a></div>
+                ';
+      $block['content'] =  $content;	    
+      drupal_add_js($js_path);   			  
+      break;
+    case 'filedata_index':     
+	  
+      include_once("h5ai/server/php/inc/util.php");
+      include_once("h5ai/server/php/inc/setup.php");
+      include_once("h5ai/server/php/inc/class-api.php");
+      include_once("h5ai/server/php/inc/class-app.php");
+      include_once("h5ai/server/php/inc/class-archive.php");
+      include_once("h5ai/server/php/inc/class-item.php");
+      include_once("h5ai/server/php/inc/class-thumb.php");
+	  
+      // node load to get organism genus and species. 
+      $nid = arg(1);
+      if(is_numeric($nid))
+        $node = node_load($nid);
+
+      $node_organism = $node->organism->genus."_".$node->organism->species; 
+	  
+	//  $url = "/sites/default/files/data/Arthropoda/";
+      $url = "/data/Arthropoda/";
+  
+      $short_name = strtolower(substr($node->organism->genus, 0, 3).substr($node->organism->species, 0, 3));	  
+	  
+      $node_organism = rawurlencode("(".$node_organism.")");
+	  
+      $species_url = $url.$short_name."-".$node_organism."/";	    
+
+ //$species_url = "/data/Arthropoda/athros-%28Athalia_rosae%29";	  
+      setup($species_url);
+	  
+      $app = new App();
+
+      if (has_request_param("action")) {
+        $api = new Api($app);
+		$api->apply();
+	  } else {	
+        define("FALLBACK", $app->get_fallback());   
+      }
+	  
+      $block['subject'] = t($node->title.' data files');
+      $block['content'] = FALLBACK;
+      drupal_add_js('h5ai/client/js/scripts_untree.js');  
+      break;
+   
+  }
+  
+  return $block;  
+}
+/**
+ * Popup display with corresponding residue
+ */
+function zclip_data($fid_type) {
+  $fid_type = explode("-", $fid_type);
+  $fid = $fid_type[0];
+  $type = $fid_type[1];
+  $field = 'fr.subject_id';
+  if($type == 'gene')
+    $field = 'fr.object_id';
+   $args = array(':feature_id' => $fid); 	  
+  if($type == 'gene')  {	        
+    $sql = "SELECT fmin, fmax, residues, strand, f.name  
+	        FROM chado.feature f, chado.featureloc fc 
+			WHERE f.feature_id=fc.srcfeature_id and  fc.feature_id=:feature_id";
+      $sequence = chado_query($sql, $args)->fetchObject();
+	  $residues = '';	  
+	  $title = $sequence->name;
+	  if(!empty($sequence->residues)) {
+	    $start = $sequence->fmin;
+		$size = $sequence->fmax - $sequence->fmin;				
+        $residues = substr($sequence->residues, $start, $size);			
+	  }	  
+  } else if($type == 'mRNA') {  
+    $type_id_cdna = '585';	
+    $sql = "select * from chado.feature where uniquename=(select uniquename from chado.feature where feature_id=:feature_id) and type_id=".$type_id_cdna;
+	$sequence = chado_query($sql, $args)->fetchObject();	
+    $residues = '';	  
+	$title = $sequence->name;
+	if(!empty($sequence->residues)) {	  			
+      $residues = $sequence->residues;			
+	}	  	
+  } else {	  
+    //TODO: write a query to get residues from featureloc and feature table
+    $sql = "select fr.subject_id, fr.object_id, fr.type_id, c.name as typename,
+                   f.name, f.uniquename, f.residues, f.feature_id, f.seqlen, 
+				   fc.srcfeature_id, fc.feature_id as fcfeature_id, fc.fmin, fc.fmax, fc.strand 
+			from  chado.feature_relationship fr, chado.feature f, chado.featureloc fc, chado.cvterm  c 
+			where f.feature_id=fr.subject_id and fc.feature_id=f.feature_id and f.type_id=c.cvterm_id 
+			and ".$field."=:fid order by c.name";   
+    $query = db_query($sql, array(':fid' => $fid));		
+  
+    $residues = '';   $title = ''; $popup = '';
+    foreach($query as $result) {  
+      $title = $result->name; 
+      $residues = $result->residues;	
+    }  
+  }
+
+  
+  print '<script type="text/javascript" src="/misc/jquery.js"></script> 
+         <script type="text/javascript" src="/sites/all/themes/i5k/js/jquery.zclip.js"></script> 
+         <script type="text/javascript" src="/sites/all/themes/i5k/js/jquery.snippet.min.js"></script>
+         <script type="text/javascript"> 
+           $(document).ready(function(){
+	         $("#copy-button").zclip({
+		       path: "/sites/all/themes/i5k/js/ZeroClipboard.swf",		
+		       copy: function(){		
+		         return $.trim($(this).next().next().text());
+		       }
+	         });
+           });
+         </script>
+		 <style>
+		   #popup-message-window #copy-button {
+			 background: #314C74;
+			 border: 1px solid;
+			 border-width: 1px;
+			 color: #FFF;text-decoration: none;padding: 4px;
+		   }
+		 </style>
+		 <div id="popup-message-window">
+		   <a id="copy-button" href="#" class="">Copy to clipboard</a>
+           <a id="popup-message-close">X</a>
+		   <div id="popup-title-seq">
+             <h1 class="popup-message-title">'.$title.'</h1><div id="popup-message-content">>'.preg_replace("#(.{80})#","\\1<br>",$residues).'</div>
+		   </div>
+		 </div>
+		 <div id="popup-message-background"></div>';	
+exit;			 
+}
+
+/**
+ * Implementation of hook_node_view
+ */
+function custom_i5k_node_view($node, $view_mode, $langcode) {  
+  switch ($node->type) {
+    case 'chado_feature':
+	  // Show feature browser and counts
+      if ($view_mode == 'full') {	     
+	     $js_path = drupal_get_path('module', 'custom_i5k').'/theme/js/detail_transcripts.js';
+		 drupal_add_js($js_path);		  
+	 
+		 $jzclip_path = drupal_get_path('theme', 'i5k').'/js/jquery.zclip.js';
+		 drupal_add_js($jzclip_path);
+		 
+		 $jsnippet_path = drupal_get_path('theme', 'i5k').'/js/jquery.snippet.min.js';
+		 drupal_add_js($jsnippet_path);    	 
+
+		$popupjs_path = drupal_get_path('module', 'custom_i5k').'/theme/js/popup.js';
+		 drupal_add_js($popupjs_path);
+		   
+		 $node->content['tripal_feature_transcripts'] = array(
+          '#markup' => theme('tripal_feature_transcripts', array('node' => $node)),
+          '#tripal_toc_id'    => 'transcripts',
+          '#tripal_toc_title' => 'Transcripts',
+        );						
+		
+		$node->content['tripal_feature_detail_transcript'] = array(
+          '#markup' => theme('tripal_feature_detail_transcript', array('node' => $node)),
+          '#tripal_toc_id'    => 'detail_transcripts',
+          '#tripal_toc_title' => 'Detail Transcripts',
+        );
+		
+		$node->content['tripal_feature_terms'] = array(
+          '#markup' => theme('tripal_feature_terms', array('node' => $node)),
+          '#tripal_toc_id'    => 'terms',
+          '#tripal_toc_title' => 'Annotated Terms',
+        );
+	  }
+  }
+}
+
+
+/**
+ *  Displaying detailed transcript view 
+ */
+function detailed_transcript_view($fid) {  
+  $data = array();
+  $values = array('subject_id' => $fid);
+  $options = array('return_array' => 1);
+
+  //Get mRNA and gene from feature_relationship table with child as subject_id(mRNA) and parent ad object_id(gene)       
+   //echo "<pre> variables::: "; print_r($_SESSION['node']->feature); echo "</pre>";   
+   $inc = 0;
+   foreach($_SESSION['node']->feature->feature_relationship as $key => $object) {
+     
+     foreach($object as $index => $feature_relationship) {       
+	   //echo "<pre> node "; print_r($feature_relationship	); echo "</pre>";
+       if(isset($feature_relationship->subject_id->feature_id) && ($feature_relationship->subject_id->feature_id == $fid)) {
+         $fid_feature_relationship = $feature_relationship; 	   
+	     $data[$inc]['name'] = $feature_relationship->object_id->name;
+	     $data[$inc]['uniquename'] = $feature_relationship->object_id->uniquename;
+	     $data[$inc]['type'] = $feature_relationship->object_id->type_id->name;
+	     $data[$inc]['refsequence_id'] = $feature_relationship->object_id->featureloc->feature_id->srcfeature_id->name;
+	     $data[$inc]['fmin'] = $feature_relationship->object_id->featureloc->feature_id->fmin + 1;
+	     $data[$inc]['fmax'] = $feature_relationship->object_id->featureloc->feature_id->fmax;
+	     if($feature_relationship->object_id->featureloc->feature_id->strand == 1)
+	       $data[$inc]['strand'] = '[+]';
+	     else if($feature_relationship->object_id->featureloc->feature_id->strand == -1)
+	       $data[$inc]['strand'] = '[-]';
+	     $data[$inc]['view_sequence'] = "<a href='#' onclick=\"popup_message_display_popup(".$feature_relationship->object_id->feature_id.", '".$feature_relationship->object_id->type_id->name."', 680, 300);\">Fasta</a>";
+		 
+		//Second level after gene - ex: mRNA etc., 
+		$inc = $inc+1;
+		$data[$inc]['name'] = $feature_relationship->subject_id->name;
+	    $data[$inc]['uniquename'] = $feature_relationship->subject_id->uniquename;
+	    $data[$inc]['type'] = $feature_relationship->subject_id->type_id->name;
+	    $data[$inc]['refsequence_id'] = $feature_relationship->subject_id->featureloc->feature_id->srcfeature_id->name;
+	    $data[$inc]['fmin'] = $feature_relationship->subject_id->featureloc->feature_id->fmin + 1;
+	    $data[$inc]['fmax'] = $feature_relationship->subject_id->featureloc->feature_id->fmax;
+	    if($feature_relationship->subject_id->featureloc->feature_id->strand == 1)
+	      $data[$inc]['strand'] = '[+]';
+	    else if($feature_relationship->subject_id->featureloc->feature_id->strand == -1)
+	      $data[$inc]['strand'] = '[-]';	
+	    $data[$inc]['view_sequence'] = "<a href='#' onclick=\"popup_message_display_popup(".$feature_relationship->subject_id->feature_id.", '".$feature_relationship->subject_id->type_id->name."', 680, 300);\">Fasta</a>";
+	   }
+	 }
+   }
+  // echo "<pre> node "; print_r($data); echo "</pre>";   
+ 
+
+  $query = db_query("select fr.subject_id, fr.object_id, fr.type_id, c.name as typename, f.name, f.uniquename, f.residues, f.feature_id, f.seqlen, fc.srcfeature_id, fc.feature_id as fcfeature_id, fc.fmin, fc.fmax, fc.strand from  chado.feature_relationship fr, chado.feature f, chado.featureloc fc, chado.cvterm  c where f.feature_id=fr.subject_id and fc.feature_id=f.feature_id and f.type_id=c.cvterm_id and fr.object_id=:fid order by c.name", array(':fid' => $fid));
+  
+  $transcript_data = array();  $i = 0;
+  foreach($query as $result) {
+	$transcript_data[$i]['subject_id'] = $result->subject_id;
+	$transcript_data[$i]['object_id'] = $result->object_id;
+	$transcript_data[$i]['type_id'] = $result->type_id;
+	$transcript_data[$i]['typename'] = $result->typename;
+	$transcript_data[$i]['name'] = $result->name;
+	$transcript_data[$i]['uniquename'] = $result->uniquename;	
+	
+	$transcript_data[$i]['feature_id'] = $result->feature_id;
+	$transcript_data[$i]['srcfeature_id'] = $result->srcfeature_id;
+	$transcript_data[$i]['fmin'] = $result->fmin + 1;
+	$transcript_data[$i]['fmax'] = $result->fmax;	
+	$transcript_data[$i]['strand'] = $result->strand;
+	
+	// View Fasta 
+	if(!empty($result->residues))	
+	  $transcript_data[$i]['view_sequence'] = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300);\">Fasta</a>";
+	else 
+      $transcript_data[$i]['view_sequence'] = "-";	
+	
+	$options = array('return_array' => 1);
+	$all_values = array('srcfeature_id' => $result->srcfeature_id, 'feature_id' => $result->feature_id);
+    $sub_features[$i] = chado_generate_var('featureloc', $all_values, $options);  	
+	$i++;
+  }
+
+  $features['data'] = $data;
+  
+  $output = theme('tripal_feature_detail_transcript', array('features' => $features, 'data' => $transcript_data, 'sub_features' => $sub_features,'feature_relationship' =>$fid_feature_relationship));
+  
+  print $output;  
+  exit();
+}
+
+
+/**
+ * After the node is built, we want to add instructions to each
+ * content section letting the administrator know which template
+ * they can customize
+ *
+ * @param unknown $build
+ */
+
+function custom_i5k_node_view_alter(&$build) {
+  global $theme;  
+
+ if(isset($build['body']['#bundle']) && $build['body']['#bundle'] != 'chado_organism') {
+  } else {
+    drupal_add_js(drupal_get_path('theme', 'i5k') .'/js/jquery.metadata.js');
+    drupal_add_js(drupal_get_path('theme', 'i5k') .'/js/jquery.tablesorter.min.js');
+
+    $js_path = drupal_get_path('module', 'custom_i5k').'/theme/js/organism.js';
+    drupal_add_js($js_path);
+  }
+
+  // if this is not a full node view, we do not want to alter
+  if ($build['#view_mode'] != 'full' OR !array_key_exists('#tripal_generic_node_template', $build)) {
+    return;
+  }
+  
+  $node_type = $build["#node"]->type;
+  $nid = $build["#node"]->nid;
+  
+  // The mode alters the format of the build array. There are three types of
+  // modes: "display", "manage_node", "manage_type".  If "display" is provided
+  // then the build array is formatted for the display of the content.
+  // If "manage_node" is provided then the build array will contain all
+  // content panes regardless if the pane should be hidden. This allows
+  // the management tool to find all content panes and their settings. If
+  // "manage_type" is provided then node-specific content panes are
+  // excluded.  Node-specific content panes are those that appear only on
+  // specific nodes and therefore should not be used when managing the
+  // TOC for a content type.
+  $mode = isset($build["#node"]->tripal_toc_mode) ? $build["#node"]->tripal_toc_mode : "display";
+  
+  
+  $cache = cache_get("theme_registry:$theme", 'cache');
+  $node = $build['#node'];
+
+  //Shortname for organism to send the organism shortname var to the organism.js file
+  $org_shortname = '';
+  if(isset($node->organism->genus) && isset($node->organism->species))
+    $org_shortname = strtolower(substr($node->organism->genus, 0, 3)).strtolower(substr($node->organism->species, 0, 3));
+  drupal_add_js(array('custom_i5k' => array('org_shortname' => $org_shortname)), array('type' => 'setting'));
+
+
+  $toc = array();
+  $toc_html = '';
+  
+  // If we are looking at a Tripal node template then we want to
+  // make some changes to each pane of content so that we can associate
+  // a table of contents and add administrator and curator messages.
+  if ($build['#tripal_generic_node_template'] == TRUE) {
+  
+    // Iterate through all the elements of the $build array and for those
+    // that are wanting to provide content for this node.
+    $markup = array();
+    foreach ($build as $key => $value) {
+      $value = $build[$key];
+      
+      // Skip the body element as the Tripal node types do not use it.
+      if ($key == 'body') {
+        continue;
+      }
+  
+      // Skip the table of contents and links as those will be placed elsewhere.
+      if (preg_match('/^#/', $key) or $key == 'tripal_toc' or $key == 'links') {
+        continue;
+      }
+
+
+      // For backwards compatibility we will handle the content type fields
+      // named 'field_resource_blocks', 'field_resource_titles', and 'field_resource_links'
+      // these fields can be added on the Drupal content types page and were
+      // specifically recoginzed by Tripal v1.1.  If the mode type is "manage_type"
+      // then remove these content panes because they are node specific.
+      if ($mode == "manage_type" and (
+          $key == "field_resource_links" or
+          $key == "field_resource_titles" or
+          $key == "field_resource_blocks")) {
+        unset($build[$key]);
+        continue;
+      }
+      if ($key == "field_resource_links") {
+        // links should just appear on the sidebar as is and not open up a panel
+        foreach (element_children($build[$key]) as $index) {
+          $element = $build[$key][$index];
+          $weight = 0;
+          $hide = 0;
+          $toc_item_id = "resource-link-$index";
+
+          // Get any overrides for this key.
+          $overrides = tripal_core_get_toc_overrides($nid, $toc_item_id, $node_type, $mode);
+          $weight = $overrides['weight'] ? $overrides['weight'] : $weight;
+          $hide = $overrides['hide'] ? $overrides['hide'] : $hide;
+
+          // If the element should be hidden then unset this key the build
+          // array continue to the next one
+          if ($mode == "display" and $overrides['hide'] == 1) {
+            continue;
+          }
+
+          // Add the link to the TOC
+          $parts = explode("|", $element['#markup']);
+		  
+		  //VIJAYA - regular expression for not displaying the multiple Annotations(i.e., Annotations1, Annotations2 etc.,)
+		  //Instead showing only one annotations page grouped with n number of annotations added to the page. 
+		  $annotation_match = preg_match("/^Annotation\d/m", $parts[0]);
+		  
+          if (count($parts) == 2 && $annotation_match == 0) {
+            $toc[$weight][$parts[0]] = "<div id=\"$toc_item_id\" class=\"tripal_toc_list_item\">" . l($parts[0], $parts[1], array('attributes' => array('target' => '_blank'))) . "</div>";
+          }
+          else if($annotation_match == 0) {
+            $toc[$weight][$parts[0]] = "<div id=\"$toc_item_id\" class=\"tripal_toc_list_item\">" . $element['#markup'] . "</div>";
+          }
+
+          // Add to the build array but do not add markup. This way 
+          // when the TOC is managed by the node 'TOC' menu these links can
+          // be ordered as well.
+          $build[$toc_item_id]['#toc_handled'] = TRUE;
+          $build[$toc_item_id]['#tripal_toc_id'] = $toc_item_id;
+          $build[$toc_item_id]['#tripal_toc_title'] = $parts[0];
+          $build[$toc_item_id]['#weight'] = $weight;
+          $build[$toc_item_id]['#hide'] = $hide;
+          $build[$toc_item_id]['#is_link'] = TRUE;
+
+        }
+        // Remove the orilink from the build array as we've moved it to
+        // appear in the TOC
+        unset($build[$key]);
+        continue;
+      }
+      if ($key == "field_resource_titles") {
+        // ignore these, we will use them in the field_resource_blocks if
+        // statement below
+        continue;
+      }
+      if ($key == "field_resource_blocks") {
+        foreach (element_children($build[$key]) as $index) {
+          // get the details and the title
+          $weight = 0;
+          $hide = 0;
+          $markup = $build[$key][$index]["#markup"];
+          $toc_item_id = "resource-$index";
+
+          // Get any overrides for this key.
+          $overrides = tripal_core_get_toc_overrides($nid, $toc_item_id, $node_type, $mode);
+
+          // If the element should be hidden then unset this key the build
+          // array continue to the next one
+          if ($mode == "display" and $overrides['hide'] == 1) {
+            continue;
+          }
+
+          $toc_item_title = $build["field_resource_titles"][$index]["#markup"];
+          $toc_item_title = $overrides['title'] ? $overrides['title'] : $toc_item_title;
+          $weight = $overrides['weight'] ? $overrides['weight'] : $weight;
+          $hide = $overrides['hide'] ? $overrides['hide'] : $hide;
+          $updated_markup = "
+            <div id=\"$toc_item_id-tripal-data-pane\" class=\"tripal-data-pane\">
+              <div class=\"$toc_item_id-tripal-data-pane-title tripal-data-pane-title\">$toc_item_title</div>
+                $markup
+              </div>
+            </div>
+          ";
+          $build[$toc_item_id]['#markup'] = $updated_markup;
+          $build[$toc_item_id]['#toc_handled'] = TRUE;
+          $build[$toc_item_id]['#tripal_toc_id'] = $toc_item_id;
+          $build[$toc_item_id]['#tripal_toc_title'] = $toc_item_title;
+          $build[$toc_item_id]['#weight'] = $weight;
+          $build[$toc_item_id]['#hide'] = $hide;
+          // add the entry to the TOC
+          $toc_item_link = "
+            <div class=\"tripal_toc_list_item\">
+              <a id=\"$toc_item_id\" class=\"tripal_toc_list_item_link\" href=\"?pane=$toc_item_id\">$toc_item_title</a>
+            </div>
+          ";
+          $toc[$weight][$toc_item_title] = $toc_item_link;
+        }
+        // Remove the key from the build array. We have have replaced it
+        unset($build[$key]);
+        unset($build["field_resource_titles"]);
+        continue;
+      } // end if ($mode != "manage_type" and $key == "field_resource_blocks") {
+  
+      // Skip any keys we may have already handled. This is the case for
+      // the field_resource_blocks where we removed the old CCK fields
+      // and added new ones.  We don't want these new ones to be processed
+      // again by the code below.
+      if (array_key_exists('#toc_handled', $build[$key]) and $build[$key]['#toc_handled'] == TRUE) {
+        continue;
+      }
+
+      // For all other fields we will handle in the following way.
+      //-----------------------
+      // INITIALIZE THE CONTENT VARIABLES
+      //-----------------------
+      $toc_item_title = $key;
+      $toc_item_id    = $key;
+      $toc_item_link  = '';
+      $weight = 0;
+      $hide = 0;
+
+      // get the title for the table of contents.  Tripal templates should
+      // have a '#tripal_toc_title' element in the build array
+      if (array_key_exists('#tripal_toc_title', $build[$key])) {
+        $toc_item_title = $build[$key]['#tripal_toc_title'];
+      }
+      // other elements in the $build array may just have a '#title' element,
+      if (array_key_exists('#title', $build[$key])) {
+        $toc_item_title = $build[$key]['#title'];
+      }
+      $toc_item_title = ucwords($toc_item_title);
+      if (array_key_exists('#weight', $build[$key])) {
+        $weight = $build[$key]['#weight'];
+      }
+      if (array_key_exists('#tripal_toc_id', $build[$key])) {
+        $toc_item_id = $build[$key]['#tripal_toc_id'];
+      }
+      
+      // Get any overrides for this key.
+      $overrides = tripal_core_get_toc_overrides($nid, $toc_item_id, $node_type, $mode);
+
+      
+      // If the element should be hidden then unset this key the build
+      // array continue to the next one
+      if ($mode == "display" and $overrides['hide'] == 1) {
+        unset($build[$key]);
+        continue;
+      }
+
+      // now override the title, weight, hidden values if a value is set in the tripal_toc table
+      $toc_item_title = $overrides['title'] ? $overrides['title'] : $toc_item_title;
+      $weight = $overrides['weight'] ? $overrides['weight'] : $weight;
+      $hide = $overrides['hide'] ? $overrides['hide'] : $hide;
+	  //VIJAYA - for other fields showing only overview tab with if condition
+	//if($toc_item_title == 'Overview' || $toc_item_title == 'Transcripts' || $toc_item_title == 'Sequences')
+      $toc_item_link = "<div class=\"tripal_toc_list_item\"><a id=\"$toc_item_id\" class=\"tripal_toc_list_item_link\" href=\"?pane=$toc_item_id\">$toc_item_title</a></div>";
+/*$toc_item_title == 'Synonyms' || $toc_item_title == 'Analyses' ||  $toc_item_title == 'Alignments' ||  $toc_item_title == 'Cross References' || $toc_item_title == 'Relationships'  || $toc_item_title == 'Detail Transcripts'*/
+
+      //-----------------------
+      // GET THE MARKUP FOR EACH ELEMENT
+      //-----------------------
+      $markup = '';
+  
+      // find the markup. Some fields will have a '#markup' and others, such
+      // as CCK elements may have a set of '#markup' elements organized by
+      // numerical keys.
+      if (array_key_exists('#markup', $build[$key]) and trim($build[$key]['#markup'])) {
+        $markup = $build[$key]['#markup'];
+      }
+      // For backwards copmatibility we should support the '#value' element as well.
+      elseif (array_key_exists('#value', $build[$key]) and trim($build[$key]['#value'])) {
+        $markup = $build[$key]['#markup'];
+      }
+      // if we have no '#markup' field then this element has not yet
+      // been rendered.  Let's render it and substitute that for markup
+      if (!$markup) {
+        $markup = trim(render($build[$key]));
+      }
+
+      // Setup the content array for this element
+      $build[$key] = array(
+        '#markup' => $markup,
+        '#tripal_toc_id' => $toc_item_id,
+        '#tripal_toc_title' => $toc_item_title,
+        '#weight' => $weight,
+        '#hide' => $hide,
+      );
+      
+  
+        // if we still don't have markup then skip this one
+      if (!$markup) {
+        continue;
+      }
+  
+      //-----------------------
+      // FIND THE TEMPLATE PATH
+      //-----------------------
+      // get the template path so we can put it in an admin message box
+      $path = '';
+      if (!array_key_exists('#tripal_template_show', $build[$key]) or
+        $build[$key]['#tripal_template_show'] == TRUE) {
+        if ($cache and array_key_exists($key, $cache->data) and array_key_exists('path', $cache->data[$key])) {
+    
+          $path = $cache->data[$key]['path'] . '/' . $key . '.tpl.php';
+    
+          $path = tripal_set_message("Administrators, you can
+            customize the way the content above is presented.  Tripal provides a template
+            file for each pane of content.  To customize, copy the template file to your
+            site's default theme, edit then " .
+            l('clear the Drupal cache', 'admin/config/development/performance', array('attributes' => array('target' => '_blank'))) . ".
+            Currently, the content above is provided by this template: <br><br>$path",
+            TRIPAL_INFO,
+            array('return_html' => 1)
+          );
+        }
+      }
+    
+      //-----------------------
+      // ADD THIS PANE TO THE TOC BY ORDER OF WEIGHT
+      //-----------------------
+      // set the weight of the TOC item and add it to our $toc array
+      // for building of the TOC below
+      $weight = 0;
+      if (array_key_exists('#weight', $build[$key])) {
+        $weight = $build[$key]['#weight'];
+      }
+      $toc[$weight][$toc_item_title] = $toc_item_link;
+
+      //-----------------------
+      // CREATE THE CONTENT PANE MARKUP
+      //-----------------------
+      // add a surrounding <div> box around the content
+      $updated_markup = "
+        <div id=\"$toc_item_id-tripal-data-pane\" class=\"tripal-data-pane\">
+          <div class=\"$toc_item_id-tripal-data-pane-title tripal-data-pane-title\">$toc_item_title</div>
+            $markup
+            $path
+          </div>
+        </div>
+      ";
+  
+      $build[$key]['#markup'] = $updated_markup;
+    } // end foreach ($build as $key => $value) {
+  } // end if ($build['#tripal_generic_node_template'] == TRUE) {
+  
+  //-----------------------
+  // BUILD THE TABLE OF CONTENTS LINKS
+  //-----------------------
+  // first sort the links numerically by their weight
+  ksort($toc, SORT_NUMERIC);
+  $toc_html = '';
+  foreach ($toc as $weight => $links) {
+    // for links in the same weight, sort them alphabetically
+	//ksort($links); //VIJAYA - Comment cause to have the resources links order as user defined.    
+    foreach ($links as $toc_item_title => $toc_item_link) {
+      $toc_html .= $toc_item_link;
+    }
+  }
+  $build['tripal_toc']['#markup'] = "<div id=\"$node->type-tripal-toc-pane\" class=\"tripal-toc-pane\">$toc_html</div>";
+}
+
+
+/**
+ * feature alignment
+ */
+function custom_i5k_feature_alignments($variables) {
+ //print_r($variables);exit;
+  // we want to provide a new variable that contains the matched features.
+  $feature = $variables['node']->feature;
+
+  // get the featureloc src features
+  $options = array(
+    'return_array' => 1,
+    'include_fk' => array(
+      'srcfeature_id' => array(
+        'type_id' => 1,
+      ),
+    ),
+  );
+
+  $feature = chado_expand_var($feature, 'table', 'featureloc', $options);
+
+  // because there are two foriegn keys in the featureloc table with the feature table
+  // we have to access the records for each by specifying the field name after the table name:
+  $ffeaturelocs = $feature->featureloc->feature_id;
+
+  // now extract the sequences
+  $featureloc_sequences = tripal_feature_load_featureloc_sequences($feature->feature_id, $ffeaturelocs);
+  $feature->featureloc_sequences = $featureloc_sequences;
+ 
+  return $feature->featureloc_sequences;  
+} 
+ 
+/**
+ *  Show list of all annotations for the organism listed.
+ **/
+function show_annotations($nid) { 
+  $node = node_load($nid);  
+  // Search for the Annotation Methods links and get/extract the node ids from the links
+  $html = '<div class="annotation_details">';
+  foreach($node->field_resource_links['und'] as $key => $links) {
+    $link = explode('/', $links['value']);  
+	//Annotation starts with Annotation1, Annotation2 etc., RegExp to match it.
+	$annotation_match = preg_match("/^Annotation\d/m", $link[0]);			
+    if($annotation_match == 1) {  
+      $annotation_nid = $link[2];
+	  $annotation_node = node_load($annotation_nid);
+      $data = $annotation_node->analysis;  	
+      $annotation_analysis = tripal_core_expand_chado_vars($data,'field','analysis.description');
+	  $html = $html.'	    
+             <table id="tripal_analysis-table-base" class="tripal_analysis-table tripal-table tripal-table-vert">
+               <tr class="tripal_analysis-table-odd-row tripal-table-even-row">
+                 <th>Analysis Name</th>
+                 <td><b>'.$annotation_analysis->name.'</b></td>
+               </tr>
+              <tr class="tripal_analysis-table-odd-row tripal-table-odd-row">
+                <th nowrap>Software</th>
+                <td>'.$annotation_analysis->program; 
+               if($annotation_analysis->programversion and $annotation_analysis->programversion != 'n/a'){
+                 $html = $html." (" . $annotation_analysis->programversion . ")"; 
+               }
+               if($annotation_analysis->algorithm){
+                 $html = $html.". " . $annotation_analysis->algorithm; 
+               }
+               $html = $html.'</td>
+             </tr>
+             <tr class="tripal_analysis-table-odd-row tripal-table-even-row">
+               <th nowrap>Source</th>
+               <td>';		
+               if($annotation_analysis->sourceuri){
+                 $html = $html. "<a href=\"$annotation_analysis->sourceuri\">$annotation_analysis->sourcename</a>"; 
+               } else {
+                 $html = $html. $annotation_analysis->sourcename; 
+               }
+               if($annotation_analysis->sourceversion){
+                 $html = $html. " (" . $annotation_analysis->sourceversion . ")"; 
+               }
+               $html = $html.'
+               </td>
+             </tr>
+             <tr class="tripal_analysis-table-odd-row tripal-table-odd-row">
+               <th nowrap>Date performed</th>
+               <td>';
+		     $html = $html. preg_replace("/^(\d+-\d+-\d+) .*/","$1",$annotation_analysis->timeexecuted);
+		     $html = $html.'</td>
+             </tr>
+             <tr class="tripal_analysis-table-odd-row tripal-table-even-row">
+               <th nowrap>Materials & Methods</th>
+               <td>';
+		     $html = $html. $annotation_analysis->description;
+		     $html = $html.'</td>
+             </tr>             	                                
+             </table>';	
+    }
+  }
+  $html = $html . '</div>'; 
+
+  return $html;
+}
+
+/**
+ *  Annotation title callback
+ */
+function annotation_page_title($nid) {
+  $node = node_load($nid);
+  return $node->title." Annotations";
+}
+
+
+/**
+* Implements hook_filter_info().
+*/
+function custom_i5k_filter_info() {
+  $filters['remove_mailto'] = array(
+    'title' => t('Remove mailto:'),
+	'description' => t('Remove the mailto from emails address in the content'),
+    'process callback' => '_remove_mailto_process',
+  );
+  return $filters;
+}
+
+
+/** 
+* Filter callback for our doggone filter.
+*/
+function _remove_mailto_process($text, $filter, $format, $langcode, $cache, $cache_id) {
+  return preg_replace('#<a href=[^>]+>([\w.-]+@(?:[\w-]+[\.{1,3}\w{2,4}]*))</a>#',"$1", $text);  
+}
+
+
+/**
+ *  Implementation of hook_theme().
+ */
+function custom_i5k_theme() {
+  $core_path = drupal_get_path('module', 'custom_i5k');
+
+  return array(
+    'tripal_organism_assembly_annotation_details' => array(
+      'template' => 'tripal_organism_assembly_annotation_details',
+    ),
+	'tripal_feature_transcripts' => array(
+      'variables' => array('node' => NULL),
+      'template' => 'tripal_feature_transcripts',
+      'path' => "$core_path/theme/templates",
+    ),
+	'tripal_feature_detail_transcript' => array(
+	  'variables' => array('node' => NULL, 'data' => NULL, 'sub_features' => NULL),
+	  'template' => 'tripal_feature_detail_transcript',
+	  'path' => "$core_path/theme/templates",
+	),
+  );
+}
+

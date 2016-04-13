@@ -1,0 +1,28 @@
+#report fieldset {
+  border: 0px;
+}
+
+.form-item-organism label {
+  float: left;
+  width: 8%;
+}
+
+#text {
+  font-size: 1.5em;
+  font-style: italic;
+  position: relative;
+  left: 15px;
+  padding-bottom: 10px;
+}
+
+#report fieldset {
+  padding: 0px;
+}
+
+#dataset-report .form-item-organism {
+  border: 1px solid #ccc;
+  padding: 15px;
+  position: relative;
+  left: 15px;
+  width: 95%;
+}

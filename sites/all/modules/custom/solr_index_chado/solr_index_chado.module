@@ -1,0 +1,232 @@
+<?php
+define('NOTE_TYPE_ID', 85);
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Alter standard search forms to capture submission.
+ */
+function solr_index_chado_form_alter(&$form, &$form_state, $form_id) {
+  $form_id_processed = $form_id;
+  switch ($form_id_processed) {
+    case 'apachesolr_search_custom_page_search_form':
+      array_unshift($form['#submit'], 'solr_index_chado_apachesolr_search_custom_page_search_form_submit');
+      break;
+    case 'apachesolr_settings':
+      $form['advanced']['apachesolr_cron_limit']['#options']['500'] = 500;
+      $form['advanced']['apachesolr_cron_limit']['#options']['600'] = 600;      
+      break;
+  }
+}
+
+
+/**
+ * Process search form to capture keys.
+ */
+function solr_index_chado_apachesolr_search_custom_page_search_form_submit($form, &$form_state) {  
+  $keys = $form_state['values']['keys'];
+  if ($keys) {
+    _search_log_preprocess_search_form($form_state['values'], $keys);
+  }
+}
+
+/**
+ * Build the (tripal chado field) documents before sending them to Solr.
+ * chado_organism(Fields): genus, species, common_name and comment 
+ * chado_feature(Fields): uniquename, name, type(Ex: gene, mRNA), Synonym
+ *                        dbxref, accession, term, term definition and comment
+ * chado_analysis(Fields): program 
+ *
+ * Supports all types of
+ * hook_apachesolr_index_document_build_' . $entity_type($documents[$id], $entity, $env_id);
+ *
+ * The function is the follow-up for apachesolr_update_index but then for
+ * specific entity types
+ *
+ * @param $document
+ * @param $entity
+ */
+function solr_index_chado_apachesolr_index_document_build_node(ApacheSolrDocument $document, $entity, $env_id) {
+  $node = $entity; 
+ // chado_organism - adding genus, species, common name and comment
+  if($node->type == 'chado_organism') {
+    $document->genus = $node->organism->genus;
+    $document->species = $node->organism->species;  
+    $document->common_name =  $node->organism->common_name;	
+
+    $text = $node->organism->comment;
+    $text .= $document->genus." ".$document->species;
+    $document->content = apachesolr_clean_text($text);    
+  } 
+  else if($node->type == 'chado_feature') {  
+    if($node->feature->type_id->name == 'gene')  { 
+      $document->gene_id = $node->feature->uniquename;
+      $document->gene_name = $node->feature->name;
+      $document->feature_type = $node->feature->type_id->name;
+     
+      //Declaring args variable
+      $args = array(':feature_id' => $node->feature->feature_id);
+	
+      //To get Synonym values
+      $synonym_sql = "select s.synonym_id, s.name from chado.feature_synonym fs, chado.synonym s where fs.synonym_id=s.synonym_id and fs.feature_id=:feature_id";	
+      $synonym_result = chado_query($synonym_sql, $args);
+      $f_synonym = '';
+      foreach($synonym_result as $synonym) {
+        $f_synonym .= $synonym->name." ";
+      } //foreach ending
+      $document->synonym = rtrim($f_synonym);
+	  
+      //To get dbxref and other values
+      $f_dbxref = ''; $accession = ''; $f_term = ''; $term_def = '';
+      $f_comment = ''; $f_name = '';
+
+      $sql = "SELECT fr.object_id,fr.subject_id, f.uniquename, f.name FROM chado.feature_relationship fr, chado.feature f WHERE f.feature_id=fr.subject_id and  fr.object_id=:feature_id"; 
+    // "SELECT * FROM chado.feature_relationship WHERE object_id=:feature_id";
+      $level2_result = chado_query($sql, $args );
+      foreach($level2_result as $child) {	 
+        $args = array(':feature_id' => $child->subject_id);	
+                   
+        //second level ex: mRNA name and uniquename 
+	$f_name .= "Name: ". $child->uniquename." ID: ".$child->name." ";
+
+        //Show the parent gene even when the child names are given to search
+ 	$mRNA_child_sql = "SELECT f.uniquename, f.name FROM chado.feature f, chado.feature_relationship fr WHERE f.feature_id=fr.subject_id AND fr.object_id=:feature_id";	
+	$mRNA_child_res = db_query($mRNA_child_sql, $args);
+	foreach($mRNA_child_res as $child_key => $mRNA_child) {
+ 	  $f_name .= $mRNA_child->uniquename." ";
+	}
+
+	$dbxref_sql = "SELECT f.uniquename, f.name, db.name as db_name, dx.accession 
+                       FROM chado.feature f, chado.feature_dbxref fd, chado.dbxref dx, chado.db db 
+                       WHERE f.feature_id=fd.feature_id AND fd.feature_id=:feature_id AND fd.dbxref_id=dx.dbxref_id AND db.db_id=dx.db_id AND db.name !='GFF_source'";
+
+	$dbxref_result = db_query($dbxref_sql, $args)->fetchAll(); 	
+			
+	foreach($dbxref_result as $i => $dbxref) {	  
+	  $f_dbxref .= $dbxref->db_name." ";
+	  $accession .= $dbxref->accession." ";
+	}	 
+	  
+	// User comments  - type_id = 85 - note
+	$type_id_note = NOTE_TYPE_ID;
+	$comment_args = array(':feature_id' => $child->subject_id, 'type_id' => $type_id_note);
+	$comment_sql = "SELECT value,feature_id FROM chado.featureprop WHERE feature_id=:feature_id AND type_id=:type_id";
+	$comment_result = db_query($comment_sql, $comment_args)->fetchAll();
+	foreach($comment_result as $k => $comment) {
+	  $f_comment .= $comment->value."; ";
+	} 
+	$f_comment = rtrim($f_comment, '; ');
+		  
+	// term and term definition
+        $term_sql = "SELECT c.cv_id, c.name as def, dx.dbxref_id, dx.db_id, dx.accession, d.name 
+                     FROM chado.feature_cvterm fc, chado.cvterm c, chado.dbxref dx, chado.db d 
+                     WHERE fc.feature_id=:feature_id AND fc.cvterm_id=c.cvterm_id AND dx.dbxref_id=c.dbxref_id AND dx.db_id=d.db_id";
+	$term_result = db_query($term_sql, $args)->fetchAll();
+	  
+	foreach($term_result as $j => $term) {
+	  $f_term .= $term->name." ".$term->accession." ".$term->name.":".$term->accession." ";
+	  $term_def .= $term->def." ";
+	}
+     }
+     $document->dbxref = rtrim($f_dbxref);
+     $document->accession = rtrim($accession);
+     $document->term = rtrim($f_term);
+     $document->term_def = rtrim($term_def); 
+
+     $f_comment = htmlspecialchars($f_comment, ENT_NOQUOTES, 'UTF-8');  
+     $f_comment = str_replace("'", '&#039;', $f_comment);
+     $text = $node->organism->comment." ".$f_name." ".$f_comment;
+     $text .= "Gene Child Info: Name: ".$f_name. "Unique name ".$f_uniquename." Unique ID:".$node->feature->uniquename."<br> Gene Name: ".$node->feature->name."<Br> TYPE: ".$node->feature->type_id->name."<br> Accession: ".$node->feature->type_id->dbxref_id->accession." Organism: ".$node->feature->organism_id->genus." ".$node->feature->organism_id->species." ".$node->feature->organism_id->common_name."Dbxref: ".$f_dbxref."Term: ".$f_term."Term Definition: ".$term_def;	  
+     $document->content = apachesolr_clean_text($text);
+    } //end of gene type
+    else {
+      $document->feature_type = $node->feature->type_id->name; 
+    } //else end for gene type
+  } //end of type chado_feature
+  else if($node->type == 'chado_analysis') {
+    $document->program = $node->analysis->program;
+  }
+
+  $documents = array();
+  $documents[] = $document;
+  return $documents;
+} //Function closing
+
+/**
+ * Implements hook_apachesolr_query_alter().
+ */
+function solr_index_chado_apachesolr_query_alter(DrupalSolrQueryInterface $query) {
+  //The qf param is used to search across 10-15 fields with various boosts.  
+  $params = array(
+    'qf' => 'content^5 text^5 gene_content^5 gene_id^10 gene_name^10 feature_type^5 accession^6.0 genus^0.5 species^1.5 common_name^15.0 program^3.0 dbxref^6.0 synonym^6.0 term^10.0 term_def^6.0',	
+  );
+  if ($query) {
+    $query->addParams($params);
+  }
+  // Highlighting the keyword search to bold
+  $query->addParam('hl.simple.pre', '<b>');
+  $query->addParam('hl.simple.post', '</b>');
+  
+  /*VIJAYA - Removing the cDNA, exon, polypeptide, CDS, mRNA etc., to show only gene pages*/
+  $exclude_feature_types[] = Array('-feature_type:cDNA');
+  $exclude_feature_types[] = Array('-feature_type:exon');
+  $exclude_feature_types[] = Array('-feature_type:pseudogenic_exon');
+  $exclude_feature_types[] = Array('-feature_type:rrna');
+  $exclude_feature_types[] = Array('-feature_type:supercontig');
+  $exclude_feature_types[] = Array('-feature_type:ncrna');
+  $exclude_feature_types[] = Array('-feature_type:pseudogene');
+  $exclude_feature_types[] = Array('-feature_type:pseudogenic_transcript');
+  $exclude_feature_types[] = Array('-feature_type:snorna');
+  $exclude_feature_types[] = Array('-feature_type:snrna');
+  $exclude_feature_types[] = Array('-feature_type:transposable_element');
+  $exclude_feature_types[] = Array('-feature_type:trna');
+  $exclude_feature_types[] = Array('-feature_type:mRNA');
+  $exclude_feature_types[] = Array('-feature_type:CDS');
+  $exclude_feature_types[] = Array('-feature_type:polypeptide');
+  $query->addParam('fq', $exclude_feature_types);  
+}
+
+/**
+ * Implements hook_facetapi_facet_info().
+ */
+function solr_index_chado_facetapi_facet_info($searcher_info) {
+  $facets = array();
+  
+  if (isset($searcher_info['types']['node'])) {   
+  // Facets are usually associated with the type of content stored in the index.
+  if (isset($searcher_info['types']['node'])) {
+  /*  $facets['feature_type'] = array(
+      'name' => 'feature_type',
+      'label' => t('custom-: feature_type'),
+      'description' => t('Shows the feature types....'),
+      'field' => 'feature_type',	  
+      'facet mincount allowed' => TRUE,	  
+      'dependency plugins' => array('role'),
+      'default widget' => 'links',
+      'allowed operators' => array(FACETAPI_OPERATOR_AND => TRUE, FACETAPI_OPERATOR_OR => TRUE),
+      'facet missing allowed' => FALSE,
+      'facet mincount allowed' => FALSE,
+	  
+      //'map callback' => 'not used for now',
+      'max callback' => FALSE,
+      'default sorts' => array(
+         array('active', SORT_DESC),
+         array('count', SORT_DESC),
+         array('display', SORT_ASC),
+       ),
+     );*/
+  }
+  
+  } 
+  
+    return $facets;
+}
+
+
+
+
+
+
+
+
+

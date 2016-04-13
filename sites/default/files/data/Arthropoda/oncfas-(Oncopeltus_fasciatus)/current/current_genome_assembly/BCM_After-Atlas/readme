@@ -1,0 +1,3 @@
+from ftp://ftp.hgsc.bcm.edu/I5K-pilot/Milkweed_bug/genome_assemblies/NOTE (accessed 12/18/2014):
+
+AfterAtlas : this is the assembly that has been gap-filled using Atlas GapFill and further scaffolded using Atlas Link . This assembly contains short contigs (<50bp) and  contigs produced by contamination from oher DNA sources. Both these are removed in the final NCBI-submitted assembly. See contamination NOTE in AfterAtlas directory for more information about contamination.

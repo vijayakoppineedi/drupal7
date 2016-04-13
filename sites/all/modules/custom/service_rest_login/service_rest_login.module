@@ -1,0 +1,129 @@
+<?php
+
+/**
+ * @file
+ *  Provides a generic but powerful API for web services.
+ */
+
+ /*
+ * Services UI is defined in the export-ui plugin.
+ */
+function service_rest_login_menu() {
+  $items = array();
+
+
+  return $items;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function service_rest_login_form_alter(&$form, $form_state, $form_id) {
+// echo "form id ".$form_id;exit;
+  switch ($form_id) {
+    case 'user_login_block':
+
+    //  $form['#submit'][] = 'after_login_submit';
+      array_unshift($form['#validate'], 'insert_before_login_submit');
+      //echo "<pre>";  print_r($form); echo "</pre>";exit;
+
+      break;
+    case 'user_login' :
+       
+      //$form['#submit'][] = 'after_login_submit';
+      array_unshift($form['#validate'], 'insert_before_login_submit');
+      
+      //array_unshift($form['#submit'], 'insert_before_login_submit');
+      // echo "<pre>";  print_r($form); echo "</pre>";exit;
+      break;
+  }
+}
+
+/*function after_login_submit($form, &$form_state) {
+//   echo "<pre> login submit ";  print_r($form_state); echo "</pre>";exit;
+
+  $form_state['complete form']['#action'] = '/about';
+  // echo "<pre> in after ";   print_r($form_state); echo "</pre>";exit;
+}*/
+
+function insert_before_login_submit($form, &$form_state) {
+ //  echo "<pre> formstate ";  print_r($form_state); echo "</pre>";exit;
+ // $form['#actions'] = '/user';
+  $values = $form_state['values']; 
+  $name = $values['name'];
+  $pass = $values['pass'];  
+
+  //$base_url = 'http://stage-www-u.lcacommons.gov/rest';
+  $base_url = 'http://gmod-dev.nal.usda.gov/webapp/web_login?username=blast_admin&password=blast2admin';
+
+  $data = array();
+  //$data = drupal_json_encode($data);
+  $options = array(
+    'headers' => array(
+      'Content-Type' => 'application/json',
+    ),
+    'method' => 'GET',
+    'data' => $data
+  );
+  //  $response = drupal_http_request($base_url . '/user/login', $options);
+
+   // $response = drupal_http_request('https://stage-www.lcacommons.gov/discovery/j_spring_security_check?ajax=true', $options);
+
+    $response =  drupal_http_request($base_url, $options);
+//setcookie('LCA_Digital_Commons', 'dmlqYXlhLml0c21lQGdtYWlsLmNvbToxNDU4ODQ4NDM1MjY0OjRhNmY0NDk3N2Q5ZTE2NTUzOWZmN2ViZWVjYTQ5MzFk');
+//setcookie('sessionid', 'pper6ybzdpyz9akesj189erl66v16cfb',0,'/','gmod-dev.nal.usda.gov');
+
+//echo "<pre> <br> -VJ-: response ";print_r($response); echo "</pre>";exit;
+//echo "<bR> Before response ".$response->redirect_url;
+//  $response->redirect_url = "https://stage-www.lcacommons.gov/discovery/login/ajaxSuccess";
+//echo "<bR> after response ".$response->redirect_url;
+//echo "<pre>";print_r($response);echo "</pre>";exit;
+
+  $data = json_decode($response->data);
+// setcookie("MyCookie", "hello", time()+3600, "", "gmod-dev.nal.usda.gov");
+ setcookie('testid', $data->sessionid, (time() + 60 * 60 * 24), "", "gmod-dev.nal.usda.gov");
+echo "sessionid=".$data->sessionid;
+exit;
+//echo "<pre> data "; print_r($data);echo "</pre>";
+  //IF java authentication is success then check the user exists in drupal or not
+  //If not insert into drupal
+  //If yes then directly login into the drupal system
+  //If java authentication fails then do nothing
+  if(($response->code == 200) && !empty($data->user)) {
+     // Now recycle the login cookie we received in the first request
+  $options['headers']['Cookie'] = 'sessionid=' . $data->sessionid;
+  // Get info about a user 
+  $data = array();
+  $options['data'] = http_build_query($data, '', '&');
+  $options['method'] = 'GET';
+  $response = drupal_http_request('http://gmod-dev.nal.usda.gov/webapp/home', $options);
+   /*
+    $is_account_exists =  db_query("select * from {users} where name = :name", array(':name' => $name))->fetchObject();
+    if(!$is_account_exists) {
+      //If not account then insert user details into drupal users table
+      // Register this new user.
+      require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+      require_once DRUPAL_ROOT . '/' . variable_get('bootstrap.inc', 'includes/bootstrap.inc');
+
+      $userinfo = array(
+        'name' => $name,
+        'pass' => $pass,
+        'mail' => $name,
+        'init' => $name,
+        'status' => 1,
+        'access' => REQUEST_TIME,
+        'login' => REQUEST_TIME
+      );
+
+      $account = user_save(drupal_anonymous_user(), $userinfo);
+      $form_state['uid'] = $account->uid;
+
+      // Terminate if an error occurred during user_save().
+      if (!$account) {
+        drupal_set_message(t("Error saving user account."), 'error');
+        return;
+      }
+    }*/
+  }
+}
+

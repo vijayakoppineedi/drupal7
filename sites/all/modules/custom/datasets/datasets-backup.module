@@ -1,0 +1,525 @@
+<?php
+
+/**
+ * @file
+ * Form to fill datasets data and put them into flat files.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function datasets_menu() {
+  $items = array();
+  
+  $items['mapped-dataset'] = array(
+    'title' => 'Dataset Form',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mapped_dataset_form'),    
+    'access arguments' => array('access datasets'),
+    'type' => MENU_CALLBACK,
+    'weight' => 100,
+  );
+  
+  return $items;
+}
+/**
+ * Implements hook_permission().
+ */
+function datasets_permission() {
+  return array(
+    'administer dataset' => array(
+      'title' => t('Administer dataset form'),
+    ),
+	'access datasets' => array(
+      'title' => t('Access datasets'),
+    ),
+  );
+}
+
+/**
+ *  hook_form() Form to fill datasets data
+ */
+function mapped_dataset_form($form, &$form_state) {
+  // Because we have many fields with the same values, we have to set
+  // #tree to be able to access them.
+  $form['#tree'] = TRUE;
+  
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'datasets') . '/css/dataset.css',
+  );
+  
+  $web_apollo_organism = variable_get('web_apollo_organism');
+  if(!empty($web_apollo_organism)) {    
+    $organism_options = get_webapollo_organisms($web_apollo_organism); 
+  }
+   
+  $form['organism'] = array(
+    '#type' => 'select',
+    '#title' => t('Organism'),
+    '#options' => $organism_options,
+    '#multiple' => FALSE,
+    '#required' => TRUE,	
+  );
+ 
+  // To make the fieldset collapsible
+  $form['data_provider'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Data provider'),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+  
+ $form['data_provider']['name'] = array(
+    '#type' => 'textfield', 
+    '#title' => t('Full Name'),    
+    '#maxlength' => 255,
+    '#required' => TRUE,
+  );
+  
+  $form['data_provider']['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Email Address'),
+    '#maxlength' => 255,
+    '#required' => TRUE,
+  );
+  
+  $form['data_provider']['affiliation'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Affiliation'),
+    '#required' => TRUE,
+  );  
+  
+  $form['geo_location'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Geo location'),
+    '#required' => FALSE,
+	'#description' => "Geographical localtion of specimen collection (Country, Site, Latitude, Longitude)",	
+  );
+  $form['tissues_located'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Tissues/Life stage<br> included'),	
+    '#required' => FALSE,
+	'#description' => "<br>(Whole individual/ antenna / pooled larva / pooled adult female/ etc.)",	
+  );
+  
+  $gender_options = Array( '' => 'Select',
+						   'Female' => 'Female',
+                           'Male' => 'Male', 
+						   'Pooled' => 'Pooled',
+						   'NA' => 'Other/NA',
+                           );
+  $gender_selected = isset($form_state['values']['gender']) ? $form_state['values']['gender'] : key($gender_options);
+  $form['gender'] = array(
+    '#type' => 'select',
+    '#title' => t('Sex'),
+	'#options' => $gender_options,	
+	'#default_value' => $gender_selected,
+    '#required' => FALSE,
+	'#prefix' => '<div class="gender_wrapper">', 
+	'#ajax' => array(      
+        'callback' => 'gender_dropdown_callback',
+        'wrapper' => 'gender_textfield',
+    ),	
+	'#limit_validation_errors' => array(),
+  );
+  $form['gender_textfield'] = array(
+    '#prefix' => '<div id="gender_textfield">',
+    '#suffix' => '</div></div>',	
+    '#type' => 'fieldset',    
+  );
+  
+   if (!empty($form_state['values']['gender']) && 		  $form_state['values']['gender'] == 'NA') {    	
+    $form['gender_textfield']['other_gender'] = array(
+      '#type' => 'textfield', 	  
+	  '#description' => t('')
+    );
+  } 
+  
+  $form['sequence_platform'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Sequencing platform and version'),	
+    '#required' => FALSE,
+	'#description' => "(Illumina Hi-Seq 200 bp)",	
+  );  
+   $publish_options = Array('' => 'Select', 
+						   'Yes' => 'Yes',
+                           'No' => 'No'); 
+  $selected = isset($form_state['values']['data_publish']) ? $form_state['values']['data_publish'] : key($publish_options);
+  
+  $form['data_publish'] = array(
+	'#type' => 'select',
+	'#options' => $publish_options, 
+    '#title' => t('Are the data published?'),
+    '#default_value' => $selected,
+	'#ajax' => array(      
+        'callback' => 'data_publish_dropdown_callback',
+        'wrapper' => 'publish',
+    ),		
+    '#required' => TRUE	
+  );
+    
+  $form['publish'] = array(
+    '#prefix' => '<div id="publish">',
+    '#suffix' => '</div>',
+    '#type' => 'fieldset',    
+  );
+
+  // Since dropdown return TRUE or FALSE, we have to check that
+  // $form_state has been filled as well as what it contains.
+  if (!empty($form_state['values']['data_publish']) && 		  isset($form_state['values']['data_publish'])) {      
+	$description = ($form_state['values']['data_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether Toronto/Ft. Lauderdale conditions of data re-use should apply');	
+	$publish_title = 'publish_field_'.$form_state['values']['data_publish'];	
+    $form['publish'][$publish_title] = array(
+      '#type' => 'textfield',
+      '#title' => t('If ').$form_state['values']['data_publish'],
+	  '#description' => $description
+    );
+  } 
+  // To make the fieldset collapsible
+  $form['analysis_method'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Analysis Method'),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE  // Added
+  );
+  $form['analysis_method']['descriptive_track'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Descriptive track<bR> name'),
+    '#required' => TRUE,
+	'#description' => "<Br>(this is what the users will see in Web Apollo, so short yet explanatory is best)",	
+  );  
+  
+  $form['analysis_method']['data_source_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Data source URL'),
+    '#required' => FALSE,
+  );   
+  $form['analysis_method']['program'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Program'),	
+    '#required' => TRUE	
+  );
+  $form['analysis_method']['version'] = array(
+    '#type' => 'textfield',
+    '#title' => t('version'),	
+    '#required' => TRUE	
+  );
+  $form['analysis_method']['additional_info'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Additional Information'),	
+	'#description' => t('Special settings or parameters used.'),
+    '#required' => FALSE
+  );
+  
+  $form['analysis_method']['dataset_entry'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Other Methods'),
+    '#prefix' => '<div id="entry-fieldset-wrapper">',
+    '#suffix' => '</div>',
+  );
+
+  if (empty($form_state['pnum_methods'])) {
+    $form_state['pnum_methods'] = 1;
+  }
+
+  for ($i = 0; $i < $form_state['pnum_methods']; $i++) {
+    $form['analysis_method']['dataset_entry']['other_methods'][$i] = array(
+		'#type' => 'textfield',
+        '#title' => '',
+        '#size' => 22,
+        '#description' => t('Such as adapter-trimming, barcoding, QC, etc'),
+        '#attributes' => array('multiple' => 'multiple'),
+    );
+  }
+
+  $form['analysis_method']['dataset_entry']['add_other_methods'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add more method'),
+    '#submit' => array('methods_add_more_add_one'),
+    '#ajax' => array(
+        'callback' => 'methods_add_more_callback',
+        'wrapper' => 'entry-fieldset-wrapper',
+    ),
+	'#limit_validation_errors' => array(), // No elements will be validated
+  );
+  if ($form_state['pnum_methods'] > 1) {
+    $form['analysis_method']['dataset_entry']['remove_other_methods'] = array(
+		'#type' => 'submit',
+		'#value' => t('Remove the latest method'),
+		'#submit' => array('methods_remove_latest_one'),
+		'#ajax' => array(
+			'callback' => 'methods_add_more_callback',
+			'wrapper' => 'entry-fieldset-wrapper',
+		),
+		'#limit_validation_errors' => array(), // No elements will be validated
+	);
+  } 
+  $form['upload_entry'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('if uploading to our ftp site, md5sum for each data file'),
+	'#prefix' => '<div id="upload-fieldset-wrapper">',
+    '#suffix' => '</div>',
+	'#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+
+  if (empty($form_state['pnum_upload'])) {
+    $form_state['pnum_upload'] = 1;
+  }
+
+  for ($i = 0; $i < $form_state['pnum_upload']; $i++) {    
+    //Parent container
+    $form['upload_entry']['upload_wrapper'][$i] = array(
+    '#prefix' => '<div class="two-col">',
+    '#suffix' => '</div>'
+    );
+	$flag = ($i == 0)?TRUE:FALSE;
+    $form['upload_entry']['upload_wrapper'][$i]['filename'] = array(
+		'#type' => 'textfield',
+        '#title' => 'Filename',
+        '#maxlength' => 255,       
+        '#prefix' => '<div class="f_class">',
+	   	'#suffix' => '</div>',	
+		'#required' => $flag,
+        '#attributes' => array('multiple' => 'multiple'),
+    );
+	$form['upload_entry']['upload_wrapper'][$i]['md5sum'] = array(
+		'#type' => 'textfield',
+        '#title' => 'md5sum',
+		'#prefix' => '<div class="m_class">',
+	   	'#suffix' => '</div>',
+        '#maxlength' => 255,	
+		'#required' => $flag,		
+		'#attributes' => array('multiple' => 'multiple'),
+    );
+  }
+
+  $form['upload_entry']['add_other_uploads'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add onother file'),
+    '#submit' => array('upload_add_more_add_one'),
+    '#ajax' => array(
+        'callback' => 'upload_add_more_callback',
+        'wrapper' => 'upload-fieldset-wrapper',
+    ),
+	'#limit_validation_errors' => array(), // No elements will be validated
+  );
+  if ($form_state['pnum_upload'] > 1) {
+	$form['upload_entry']['remove_other_uploads'] = array(
+		'#type' => 'submit',
+		'#value' => t('Remove latest one'),
+		'#submit' => array('upload_remove_latest_one'),
+		'#ajax' => array(
+			'callback' => 'upload_add_more_callback',
+			'wrapper' => 'upload-fieldset-wrapper',
+		),
+		'#limit_validation_errors' => array(), // No elements will be validated
+  );
+  }
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+  
+  return $form;
+}
+
+/**
+ * dataset validation
+ */
+function mapped_dataset_form_validate($form, &$form_state) {
+  $values = $form_state['values'];
+  //echo "<prE>"; print_r($values);echo "</prE>";exit;
+  $name = $values['data_provider']['name'];
+  if (!preg_match('!^[\w @-]*$!', $name)){
+     form_set_error('name', t('Your Name can only contains numbers, letters @  - _.'));
+  }
+  if (!valid_email_address($values['data_provider']['email'])) {
+    form_set_error('email', t('You must enter a valid e-mail address.'));
+  }
+  $affiliation = $values['data_provider']['affiliation'];
+  if (!preg_match('!^[\w @-]*$!', $affiliation)){
+     form_set_error('affiliation', t('Your 
+	 Affiliation can only contains numbers, letters @  - _.'));
+  }
+  
+  if (!empty($values['analysis_method']['data_source_url']) && !valid_url($values['analysis_method']['data_source_url'], 'TRUE')) {
+    form_set_error('data_source_url', t('You must enter a valid url.'));
+  }
+  
+}
+
+/**
+ * form submit
+ */
+function mapped_dataset_form_submit($form, &$form_state) {
+  //echo "<pre>"; print_r($form_state['values']);echo "</prE>";exit;
+  
+  $values = $form_state['values'];
+
+  drupal_add_http_header('Content-Type', 'text/csv; utf-8');
+  drupal_add_http_header('Content-Disposition', 'attachment;filename=csvfiles.csv');
+  
+  $filename = 'datasets/'.$values['data_provider']['email']."-".$values['organism'].".csv";
+  // Open the file for writing.  
+  $fh = fopen($filename, 'w'); 
+  
+  //fputcsv($file, array('Description', 'Click', 'CTR'));      
+
+  // Get the organism fullname rather than short name 
+  $annotation = 1;
+  $web_apollo_organism = variable_get('web_apollo_organism');
+  $organism_data = get_webapollo_organisms($web_apollo_organism, $annotation); 
+
+  fputcsv($fh, array('Organism',$organism_data[$values['organism']]));
+  
+  fputcsv($fh, array('Data Provider'));
+  fputcsv($fh, array('Name',$values['data_provider']['name']));
+  fputcsv($fh, array('Email',$values['data_provider']['email']));  
+  fputcsv($fh, array('Affiliation',$values['data_provider']['affiliation']));
+  
+  $data_keys = array('Geo Location', 'Tissues located', 'Gender', 'Sequence Platform', 'Descriptive Track', 'Source URL', 'Program', 'Version', 'Additional Information', 'Other Methods', 'Data publish', 'Filename', 'Md5sum');
+  
+  $other_methods = '';
+  if(count($values['analysis_method']['dataset_entry']['other_methods']) > 0 && !empty($values['analysis_method']['dataset_entry']['other_methods'][0])) {
+	foreach($values['analysis_method']['dataset_entry']['other_methods'] as $key => $method) {
+      $other_methods .= !empty($method)?$method.', ':'';
+    }
+	$other_methods = rtrim($other_methods, ', ');
+  }
+  
+  //Upload filename and md5sum
+  $data_upload = $values['upload_entry']['upload_wrapper'];
+  $filename = ''; $md5sum = '';
+  if(count($data_upload) > 0 && !empty($data_upload[0]['filename']) && !empty($data_upload[0]['md5sum'])) {
+    foreach($data_upload as $key => $upload) {
+      $filename .= !empty($upload['filename'])?$upload['filename'].', ':'';
+	  $md5sum .= !empty($upload['md5sum'])?$upload['md5sum'].', ':'';
+	}
+	$filename = rtrim($filename, ', ');
+	$md5sum = rtrim($md5sum, ', ');
+  }
+
+  //Data publish
+  $data_publish = ($values['data_publish'] == 'Yes')?'Yes: ': 'No: ';  
+  $publish_field = 'publish_field_'.$data_publish;
+  $publish = $data_publish;
+  foreach($values['publish'] as $key => $field) {
+    if(!empty($field))
+      $publish .= " ".$field;
+  }
+  $data_values = array(
+					 $values['geo_location'],
+					 $values['tissues_located'],
+					 $values['gender'],
+					 $values['sequence_platform'],					 
+                     $values['analysis_method']['descriptive_track'],
+					 $values['analysis_method']['data_source_url'],
+					 $values['analysis_method']['program'],
+					 $values['analysis_method']['version'],
+					 $values['analysis_method']['additional_info'],
+					 $other_methods,
+					 $publish,					 
+					 $filename,
+					 $md5sum
+					); 
+  fputcsv($fh, array());
+  fputcsv($fh, $data_keys);
+  fputcsv($fh, $data_values);
+ 
+//ob_clean();
+//print $output;
+//exit;   
+}
+// ---------------  AJAX CALLBACK  FUNCTIONS FOR TEXT FIELD-----------------
+function data_publish_dropdown_callback($form, $form_state) {
+  return $form['publish'];
+}
+
+function gender_dropdown_callback($form, $form_state) {
+  return $form['gender_textfield'];
+}
+
+function methods_add_more_add_one($form, &$form_state) {
+    if (!isset($form_state['pnum_methods'])) {
+        $form_state['pnum_methods'] = 0;
+        $form_state['pnum_methods']++;
+    }
+
+    $form_state['pnum_methods']++;
+    $form_state['rebuild'] = TRUE;
+}
+
+function methods_add_more_callback($form, $form_state) {
+    return $form['analysis_method']['dataset_entry'];
+}
+
+function methods_remove_latest_one($form, &$form_state) {
+  if ($form_state['pnum_methods'] > 1) {
+    $form_state['pnum_methods']--;
+  }
+  $form_state['rebuild'] = TRUE;
+}
+
+function upload_add_more_add_one($form, &$form_state) {
+
+    if (!isset($form_state['pnum_upload'])) {
+        $form_state['pnum_upload'] = 0;
+        $form_state['pnum_upload']++;
+    }
+
+    $form_state['pnum_upload']++;
+    $form_state['rebuild'] = TRUE;
+}
+
+function upload_add_more_callback($form, $form_state) {
+    return $form['upload_entry'];
+}
+
+function upload_remove_latest_one($form, &$form_state) {
+  if ($form_state['pnum_upload'] > 1) {
+    $form_state['pnum_upload']--;
+  }
+  $form_state['rebuild'] = TRUE;
+}
+
+function datasets_form_alter(&$form, &$form_state, $form_id) { 
+ if($form_id == 'dataset_registration_form')  {
+  $captcha = $form['analysis_method']['dataset_entry']['captcha'];
+  unset($form['analysis_method']['dataset_entry']['captcha']);  
+  $form['submit_captcha'][] = $captcha;
+  $form['submit_captcha'][] = $form['submit']; 
+  unset($form['submit']);
+ }   
+}
+
+/**
+ * Default implementation of hook_captcha().
+ */
+function datasets_captcha($op, $captcha_type = '') {
+  $result = captcha_captcha($op, $captcha_type);  
+  
+    if (($op == 'generate') && ($captcha_type == 'Math')) {
+      $result = array();
+      $answer = mt_rand(1, 20);
+      $x = mt_rand(1, $answer);
+      $y = $answer - $x;
+      $result['solution'] = "$answer";
+  
+      // Build challenge widget.
+      // Note that we also use t() for the math challenge itself. This makes
+      // it possible to 'rephrase' the challenge a bit through localization
+      // or string overrides.
+      $result['form']['captcha_response'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Math question'),
+        '#description' => t('Solve this simple math problem and enter the result to help us reduce spam. E.g. for 1+3, enter 4.'),
+        '#field_prefix' => t('@x + @y = ', array('@x' => $x, '@y' => $y)),
+        '#size' => 4,
+        '#maxlength' => 2,
+        '#required' => TRUE,
+      );
+       
+    }
+  return $result;
+}

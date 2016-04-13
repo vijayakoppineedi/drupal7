@@ -1,0 +1,51 @@
+#request-project select {
+  width: 44.5%;
+}
+
+#text {
+  font-size: 1.5em;
+  font-style: italic; 
+  /*color: #a94442;*/
+  padding-bottom: 15px;
+}
+
+.form-item-fullname label,
+.form-item-email label {
+  float: left;
+  min-width: 8.5%;
+}
+
+#fund_textfield fieldset.panel {
+  border: 0px;
+  -webkit-box-shadow: 0 0px 0px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0px !important;
+}
+
+#request-project .panel-body {
+  padding: 0px !important;
+}
+
+.form-required {
+  color: red;
+}
+
+.captcha {
+  position: relative;
+  left: -85px;
+  width: 31%;
+}
+
+.captcha > label {
+  float: left;
+}
+
+.form-item-captcha-response > input {
+  float: left;
+  position: relative;
+  left: 254px;
+}
+
+.grippie {
+  width: 477px !important;
+  margin-left: 0px !important;
+}

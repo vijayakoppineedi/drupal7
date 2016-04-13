@@ -1,0 +1,12 @@
+name = Datasets form
+description = Form to fill datasets data and put them into flat files
+core = 7.x
+package = Custom
+version = 7.x
+
+; Information added on 2015-08-03
+version = "7.x-1.0"
+core = "7.x"
+project = "datasets"
+datestamp = "1438617499"
+

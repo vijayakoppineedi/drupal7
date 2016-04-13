@@ -1,0 +1,14 @@
+name = Solr Index Chado
+description = Index the chado fields into Apache solr
+core = 7.x
+package = Custom
+version = 7.x
+dependencies[] = apachesolr
+dependencies[] = apachesolr_search
+
+; Information added on 2015-07-30
+version = "7.x-1.0"
+core = "7.x"
+project = "solr_index_chado"
+datestamp = "1438269756"
+

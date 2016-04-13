@@ -1,0 +1,438 @@
+<?php
+
+/**
+ * Implementation of hook_menu().
+ */
+function custom_i5k_menu() {
+  $items['statistics'] = array(
+    'title' => 'Statistics',
+    'page callback' => 'get_statistics',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  ); 
+  $items['annotations/%'] = array(
+    'title callback' => 'annotation_page_title',
+	'title arguments' => array(1),
+    'page callback' => 'show_annotations',
+	'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );  
+  $items['community_contact/%'] = array(
+    'title' => 'Community contact address',	
+    'page callback' => 'get_community_contact_emailid',
+	'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );  
+
+  return $items;
+}
+
+/**
+ *  Retrieving the email id for the selected community contact on the organism page.
+ *  @params $nid
+ *  $nid looks like  85492D0, 85492D1 etcs., so exploding the
+ * nid and delta value 
+ */
+function get_community_contact_emailid($nid) {
+  $cid = explode("D", $nid);
+  $node_id = $cid[0];
+  $delta = $cid[1];  
+  
+  $result = db_select('field_data_field_community_contact', 'c')
+         ->fields('c', array('field_community_contact_value'))
+         ->condition('entity_id', $node_id)
+         ->condition('delta', $delta)
+         ->execute()
+         ->fetch();
+  $emailid = '';		 
+  
+  if(!empty($result->field_community_contact_value)) {
+    $contact_value = explode("|", $result->field_community_contact_value);
+    $emailid = !empty($contact_value[1])?$contact_value[1]:'';    
+  } 		 
+
+  drupal_json_output($emailid);
+  exit;
+}
+
+/**
+ *  Redirecting to home page after user login.
+ */
+function custom_i5k_user_login(&$edit, $account) {
+  if (!isset($_POST['form_id']) || $_POST['form_id'] != 'user_pass_reset') {
+    if(in_array('authenticated user', $account->roles)) {
+      $_GET['destination'] = 'home';
+    }
+  }
+} 
+
+/**
+ * Pull the statistics from the json file
+ */ 
+function get_statistics() {
+  $content = '';
+  drupal_add_js(drupal_get_path('theme', 'i5k') .'/js/jquery.metadata.js');
+  drupal_add_js(drupal_get_path('theme', 'i5k') .'/js/jquery.tablesorter.min.js');
+  $js_path = drupal_get_path('module', 'custom_i5k').'/theme/js/stat.js';
+
+  $content .= '<div id="stat"></div>';
+  drupal_add_js($js_path);
+
+  return $content;
+}
+
+/**
+ * Implements hook_views_api()
+ */
+function custom_i5k_views_api() {
+  return array(
+      "version" => "3.0",
+	   'path' => drupal_get_path('module', 'custom_i5k'),
+	  );
+}
+
+
+/**
+ * Implements hook_views_data_alter()
+ */
+function custom_i5k_views_data_alter(&$data) {
+  $data['feature']['timeaccessioned'] = array(
+    'title' => t('timeaccession with datetime...'),
+    'help' => t('Convert datetime format to long format'),
+    'field' => array(	   
+      'handler' => 'custom_i5k_handler_field_datetime',	  
+    ),
+	'filter' => Array
+       (
+         'handler' => 'views_handler_filter_date',
+         'name' => 'views_handler_filter_date'
+       ),
+    'sort' => Array
+       (
+         'handler' => 'views_handler_sort_date',
+         'name' => 'views_handler_sort_date'
+       )
+  );  
+}
+
+class custom_i5k_handler_field_datetime extends views_handler_field_date {
+  function render($values) {
+    // Convert the stored datetime text string into a unix timestamp, as this is what the
+    // regular unix timestamp formatter is expecting. 
+	
+    $values->{$this->field_alias} = strToTime($values->{$this->field_alias});
+	
+    // Render the date using the normal date handler
+    return parent::render($values);
+  }
+}
+
+/**
+ *  hook_form_alter - Arranging the fields in an order for the organism content type.
+ */ 
+function custom_i5k_form_alter(&$form, &$form_state, $form_id) {
+  if($form_id == 'chado_organism_node_form') {
+    $form['menu']['#weight'] = -100;
+    $form['genus']['#weight'] = -99;
+    $form['species']['#weight'] = -98;
+    $form['abbreviation']['#weight'] = -97;
+    $form['common_name']['#weight'] = -96;
+    $form['description']['#weight'] = -95;
+    $form['organism_image']['#weight'] = -94;
+    $form['field_organism_image']['#weight'] = -93;
+    $form['field_image_credit']['#weight'] = -92;
+    $form['field_resource_titles']['#weight'] = -91;
+    $form['field_resource_links']['#weight'] = -90;
+    $form['field_resource_blocks']['#weight'] = -89;
+    $form['revision_information']['#weight'] = -88;
+    $form['path']['#weight'] = -87;
+    $form['comment_settings']['#weight'] = -86;
+    $form['attachment']['#weight'] = -85;
+    $form['author']['#weight'] = -84;
+    $form['options']['#weight'] = -83;	
+	
+    // Making organism image field disable
+    $form['organism_image']['#disabled'] = TRUE;	
+  } else if($form_id == 'tripal_feature_gff3_load_form') {    
+    $form['gff_file']['#maxlength'] = 256;	
+  } else if($form_id == 'contact_site_form') {
+    $form['#validate'][] = 'custom_contact_form_validate';
+  } else if($form_id == 'user_pass') {    
+	$form = Array();
+	form_set_error("", "Access Denied.");
+  }  
+
+ return $form; 
+}
+
+/**
+ *  Contact form validation
+ */
+function custom_contact_form_validate($form, &$form_state) {
+   // Automated emails that include reference to .[/url]. or
+   // .[/link]. will be rejected by the mail processing
+   $msg = $form_state['input']['message'] ;
+   $pos = strpos($msg, "[/url]") ;
+   if ($pos !== false) {
+     form_set_error('message', t('Due to spam problems, you may not include [url] tags in your email.'));
+   }
+
+   $pos = strpos($msg, "[/link]") ;
+   if ($pos !== false) {
+     form_set_error('message', t('Due to spam problems, you may not include [link] tags in your email.'));
+   }
+   
+   //Character validation
+   $firstname = $form_state['input']['name']; 
+   if (!preg_match('!^[\w @-]*$!', $firstname)){ 
+     form_set_error('name', t('Your Name can only contains numbers, letters @  - _.'));
+   }
+   //Subject validation
+   $subject =  $form_state['input']['subject'];
+   if (!preg_match("!^[\w @-]*$!", $subject) ) {
+     form_set_error('subject', t('Subject can only contains numbers, letters @  - _.'));
+   }
+}
+
+/**
+ * Implementation of hook_block()
+ * Species statistics - Showing top news on the block region with more link.
+ */
+function custom_i5k_block_info() {
+  $blocks['statistics'] = array(
+    'info' => t('Statistics'),
+	'status' => TRUE,
+    'region' => 'sidebar_second',
+    // DRUPAL_CACHE_PER_ROLE will be assumed.
+  );
+  
+  $blocks['filedata_index'] = array(
+    'info' => t('File data indexing'),
+    'status' => TRUE,
+    'region' => 'sidebar_second',
+   'cache' => DRUPAL_NO_CACHE,
+    // DRUPAL_CACHE_PER_ROLE will be assumed.
+  );
+
+  return $blocks;
+} 
+
+/**
+ * Implements hook_block_view().
+ *
+ * This hook generates the contents of the blocks themselves.
+ */
+function custom_i5k_block_view($delta = '') {
+  // The $delta parameter tells us which block is being requested.
+  $block = array();
+  switch ($delta) {   
+    case 'statistics':
+      $block['subject'] = t('Manual annotation statistics');      
+      $js_path = drupal_get_path('module', 'custom_i5k').'/theme/js/home.js';	  
+      $content = '<div id="stats"> 
+                    <table style="border: none; width: 100%; text-align:center;">
+                      <tr>
+                        <td style="border: none; width: 50%; font-size: 150%;"><span id="total-annotations"></span></td>
+                        <td style="border: none; width: 50%; font-size: 150%;"><span id="over-species"></span></td>
+                      </tr>
+                      <tr><td style="border: none; width: 50%;">annotations</td><td style="border: none; width: 50%;">species</td></tr>
+                    </table>
+                    <table id="recently-annotations">
+                      <tr><th>Species</th><th># of annotations</th><th>Last modified</th></tr>
+                    </table>
+                  </div>
+                 <div class="more-link"><span class="icon">&nbsp;</span><a href="/statistics">MORE</a></div>
+                ';
+      $block['content'] =  $content;	    
+      drupal_add_js($js_path);   			  
+      break;
+  case 'filedata_index':     	  
+      include_once("h5ai/server/php/inc/util.php");
+      include_once("h5ai/server/php/inc/setup.php");
+      include_once("h5ai/server/php/inc/class-api.php");
+      include_once("h5ai/server/php/inc/class-app.php");
+      include_once("h5ai/server/php/inc/class-archive.php");
+      include_once("h5ai/server/php/inc/class-item.php");
+      include_once("h5ai/server/php/inc/class-thumb.php");
+	  
+      // node load to get organism genus and species. 
+      $nid = arg(1);
+	  
+      if(is_numeric($nid))
+        $node = node_load($nid);
+
+      $node_organism = $node->organism->genus."_".$node->organism->species; 
+	  
+	  // $url = "/sites/default/files/data/Arthropoda/";
+      $url = "/data/Arthropoda/";
+  
+      $short_name = strtolower(substr($node->organism->genus, 0, 3).substr($node->organism->species, 0, 3));	  
+	  
+      $node_organism = rawurlencode("(".$node_organism.")");
+	  
+      $species_url = $url.$short_name."-".$node_organism."/";	    
+
+    // $species_url = "/data/Arthropoda/athros-%28Athalia_rosae%29";	  
+      setup($species_url);
+	  
+      $app = new App();
+
+      if (has_request_param("action")) {
+        $api = new Api($app);
+	$api->apply();
+      } else {	
+        define("FALLBACK", $app->get_fallback());   
+      }
+	  
+      $block['subject'] = t($node->title.' data files');
+      $block['content'] = FALLBACK;
+      drupal_add_js('h5ai/client/js/scripts_untree.js');  
+      break;
+      
+  }
+  
+  return $block;  
+}
+
+/**
+ *  Show list of all annotations for the organism listed.
+ **/
+function show_annotations($nid) { 
+  $node = node_load($nid);  
+  // Search for the Annotation Methods links and get/extract the node ids from the links
+  $html = '<div class="annotation_details">';
+  foreach($node->field_resource_links['und'] as $key => $links) {
+    $link = explode('/', $links['value']);  
+	//Annotation starts with Annotation1, Annotation2 etc., RegExp to match it.
+	$annotation_match = preg_match("/^Annotation\d/m", $link[0]);			
+    if($annotation_match == 1) {  
+      $annotation_nid = $link[2];
+	  $annotation_node = node_load($annotation_nid);
+      $data = $annotation_node->analysis;  	
+      $annotation_analysis = tripal_core_expand_chado_vars($data,'field','analysis.description');
+	  $html = $html.'	    
+             <table id="tripal_analysis-table-base" class="tripal_analysis-table tripal-table tripal-table-vert">
+               <tr class="tripal_analysis-table-odd-row tripal-table-even-row">
+                 <th>Analysis Name</th>
+                 <td><b>'.$annotation_analysis->name.'</b></td>
+               </tr>
+              <tr class="tripal_analysis-table-odd-row tripal-table-odd-row">
+                <th nowrap>Software</th>
+                <td>'.$annotation_analysis->program; 
+               if($annotation_analysis->programversion and $annotation_analysis->programversion != 'n/a'){
+                 $html = $html." (" . $annotation_analysis->programversion . ")"; 
+               }
+               if($annotation_analysis->algorithm){
+                 $html = $html.". " . $annotation_analysis->algorithm; 
+               }
+               $html = $html.'</td>
+             </tr>
+             <tr class="tripal_analysis-table-odd-row tripal-table-even-row">
+               <th nowrap>Source</th>
+               <td>';		
+               if($annotation_analysis->sourceuri){
+                 $html = $html. "<a href=\"$annotation_analysis->sourceuri\">$annotation_analysis->sourcename</a>"; 
+               } else {
+                 $html = $html. $annotation_analysis->sourcename; 
+               }
+               if($annotation_analysis->sourceversion){
+                 $html = $html. " (" . $annotation_analysis->sourceversion . ")"; 
+               }
+               $html = $html.'
+               </td>
+             </tr>
+             <tr class="tripal_analysis-table-odd-row tripal-table-odd-row">
+               <th nowrap>Date performed</th>
+               <td>';
+		     $html = $html. preg_replace("/^(\d+-\d+-\d+) .*/","$1",$annotation_analysis->timeexecuted);
+		     $html = $html.'</td>
+             </tr>
+             <tr class="tripal_analysis-table-odd-row tripal-table-even-row">
+               <th nowrap>Materials & Methods</th>
+               <td>';
+		     $html = $html. $annotation_analysis->description;
+		     $html = $html.'</td>
+             </tr>             	                                
+             </table>';	
+    }
+  }
+  $html = $html . '</div>'; 
+
+  return $html;
+}
+
+/**
+ *  Annotation title callback
+ */
+function annotation_page_title($nid) {
+  $node = node_load($nid);
+  return $node->title." Annotations";
+}
+
+
+/**
+* Implements hook_filter_info().
+*/
+function custom_i5k_filter_info() {
+  $filters['remove_mailto'] = array(
+    'title' => t('Remove mailto:'),
+	'description' => t('Remove the mailto from emails address in the content'),
+    'process callback' => '_remove_mailto_process',
+  );
+  return $filters;
+}
+
+/** 
+* Filter callback for our doggone filter.
+*/
+function _remove_mailto_process($text, $filter, $format, $langcode, $cache, $cache_id) {
+  return preg_replace('#<a href=[^>]+>([\w.-]+@(?:[\w-]+[\.{1,3}\w{2,4}]*))</a>#',"$1", $text);  
+}
+
+ 
+/**
+ *  Implementation of hook_theme().
+ */
+function custom_i5k_theme() {
+  $core_path = drupal_get_path('module', 'custom_i5k');
+
+  return array(
+    'tripal_organism_assembly_annotation_details' => array(
+      'template' => 'tripal_organism_assembly_annotation_details',
+    ),	
+  );
+}
+
+/**
+ * Update all gene page urls to gene id.
+ */ 
+function custom_i5k_update_7110(&$sandbox) {  
+  // Retrieve all records
+  $result = db_query("select nid, f.feature_id, f.uniquename from public.chado_feature cf, chado.feature f where f.feature_id=cf.feature_id and f.type_id=".GENE_TYPE_ID);
+  
+  foreach($result as $item) {    
+	$source = 'node/'.$item->nid;
+	$alias = $item->uniquename;
+	$language = 'und';
+	  // Build the new path alias array and send it off to be created.
+    $path = array(
+      'source' => $source, 
+      'alias' => $alias, 
+      'language' => $language,
+    );
+	
+	$alias_exists_ornot = db_query("select count(*) as cnt from {url_alias} where source=:source", array('source' => $source))->fetchField();
+	//print_r($alias_exists_ornot);
+	if($alias_exists_ornot > 0) {
+	  $delete = db_query("delete from {url_alias} where source=:source", array(':source' => $source));
+      $path_update = db_query("update {url_alias} set source=:source, alias=:alias, language=:language where source=:source", $path, array(':source' => $source));  
+	} else {
+	  $path_insert = db_query("INSERT INTO {url_alias}(source, alias, language) values(:source, :alias, :language)", $path);
+	}	
+  }
+ return t('Updated all gene page urls to the geneId');
+}
+ 
+
