@@ -300,6 +300,10 @@ function custom_i5k_block_view($delta = '') {
  *  Show list of all annotations for the organism listed.
  **/
 function show_annotations($nid) { 
+  drupal_add_css(drupal_get_path('module', 'custom_i5k') . '/theme/css/annotation.css');
+
+
+
   $node = node_load($nid);  
   // Search for the Annotation Methods links and get/extract the node ids from the links
   $html = '<div class="annotation_details">';
@@ -355,7 +359,7 @@ function show_annotations($nid) {
 		     $html = $html. $annotation_analysis->description;
 		     $html = $html.'</td>
              </tr>             	                                
-             </table>';	
+             </table><br>';	
     }
   }
   $html = $html . '</div>'; 

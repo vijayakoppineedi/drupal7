@@ -27,6 +27,10 @@
   border: 0px;
 }
 
+.form-item-is-ogs {
+  clear: both;
+}
+
 #edit-add-other-uploads {
   float: left;
   clear: both;
@@ -39,7 +43,14 @@
   width: 46%;
 }
 
-#gene-prediction select {
+select#edit-organism  {
+  width: 44.5%;
+} 
+
+select#edit-reason {
+  width: 44.5%;
+}
+select#edit-is-ogs {
   width: 44.5%;
 }
 
@@ -79,6 +90,9 @@ fieldset.panel-default > legend.panel-heading {
 #edit-analysis-method label {
   float: left;
   min-width: 14%;
+}
+#edit-analysis-method .grippie {
+  margin-left: 154.2px !important;
 }
 
 .form-item-organism label {

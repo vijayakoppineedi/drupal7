@@ -17,6 +17,7 @@ create table public.ds_cordinator_organism(id bigserial primary key,
 								 );
 								 
 create table public.ds_request_project(id bigserial primary key,
+                                       uid integer DEFAULT 0 NOT NULL,
                                        genus text NOT NULL,
                                        species text NOT NULL,
 				       ncbi_taxid integer NOT NULL,
@@ -28,11 +29,13 @@ create table public.ds_request_project(id bigserial primary key,
 				       description text NOT NULL,
                                        fullname varchar(254) NOT NULL,
 				       email varchar(254) NOT NULL,
+                                       
                                        status smallint NOT NULL default 2,
                                        created integer default 0
                                       );
 
 create table public.ds_organism_assembly(oa_id bigserial primary key,
+        uid integer DEFAULT 0 NOT NULL,
 	name varchar(254) NOT NULL,
   	email varchar(254) NOT NULL,
 	organism varchar(128) NOT NULL,
@@ -77,6 +80,7 @@ CREATE SEQUENCE public.gene_prediction_pid_seq
 
 create table public.ds_gene_prediction(
   pid integer PRIMARY KEY DEFAULT nextval('gene_prediction_pid_seq'::regclass),
+  uid integer DEFAULT 0 NOT NULL,
   organism varchar(128) NOT NULL,
   program varchar(254) NOT NULL,
   version varchar(124) NOT NULL,
@@ -104,6 +108,7 @@ CREATE SEQUENCE mapped_dataset_id_seq
 	
 create table public.ds_mapped_dataset(
   id integer PRIMARY KEY DEFAULT nextval('mapped_dataset_id_seq'::regclass),
+  uid integer DEFAULT 0 NOT NULL,
   organism varchar(128) NOT NULL,
   name varchar(254) NOT NULL,
   email varchar(254) NOT NULL,

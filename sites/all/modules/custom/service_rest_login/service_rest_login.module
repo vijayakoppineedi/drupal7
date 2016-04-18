@@ -15,6 +15,16 @@ function service_rest_login_menu() {
   return $items;
 }
 
+function service_rest_login_user_login(&$edit, $account) {
+  foreach($edit as $key => $user_data) {
+     if($key == 'complete form') {
+      $destination = $user_data['#action'];
+       drupal_goto($destination);
+     }
+  }
+}
+
+
 /**
  * Implements hook_form_alter().
  */
@@ -54,7 +64,7 @@ function insert_before_login_submit($form, &$form_state) {
   $pass = $values['pass'];  
 
   //$base_url = 'http://stage-www-u.lcacommons.gov/rest';
-  $base_url = 'http://gmod-dev.nal.usda.gov/webapp/web_login?username=blast_admin&password=blast2admin';
+  $base_url = 'http://gmod-dev.nal.usda.gov/webapp/web_login?username='.$name.'&password='.$pass;
 
   $data = array();
   //$data = drupal_json_encode($data);
@@ -65,50 +75,33 @@ function insert_before_login_submit($form, &$form_state) {
     'method' => 'GET',
     'data' => $data
   );
-  //  $response = drupal_http_request($base_url . '/user/login', $options);
 
-   // $response = drupal_http_request('https://stage-www.lcacommons.gov/discovery/j_spring_security_check?ajax=true', $options);
+  $response =  drupal_http_request($base_url, $options);
 
-    $response =  drupal_http_request($base_url, $options);
-//setcookie('LCA_Digital_Commons', 'dmlqYXlhLml0c21lQGdtYWlsLmNvbToxNDU4ODQ4NDM1MjY0OjRhNmY0NDk3N2Q5ZTE2NTUzOWZmN2ViZWVjYTQ5MzFk');
-//setcookie('sessionid', 'pper6ybzdpyz9akesj189erl66v16cfb',0,'/','gmod-dev.nal.usda.gov');
-
-//echo "<pre> <br> -VJ-: response ";print_r($response); echo "</pre>";exit;
 //echo "<bR> Before response ".$response->redirect_url;
 //  $response->redirect_url = "https://stage-www.lcacommons.gov/discovery/login/ajaxSuccess";
-//echo "<bR> after response ".$response->redirect_url;
-//echo "<pre>";print_r($response);echo "</pre>";exit;
 
   $data = json_decode($response->data);
-// setcookie("MyCookie", "hello", time()+3600, "", "gmod-dev.nal.usda.gov");
- setcookie('testid', $data->sessionid, (time() + 60 * 60 * 24), "", "gmod-dev.nal.usda.gov");
-echo "sessionid=".$data->sessionid;
-exit;
-//echo "<pre> data "; print_r($data);echo "</pre>";
-  //IF java authentication is success then check the user exists in drupal or not
+ // echo "<pre> "; print_r($response); print_r($data); echo "</pre>";exit;
+
+  //IF Django authentication is success then check the user exists in drupal or not
   //If not insert into drupal
   //If yes then directly login into the drupal system
   //If java authentication fails then do nothing
   if(($response->code == 200) && !empty($data->user)) {
-     // Now recycle the login cookie we received in the first request
-  $options['headers']['Cookie'] = 'sessionid=' . $data->sessionid;
-  // Get info about a user 
-  $data = array();
-  $options['data'] = http_build_query($data, '', '&');
-  $options['method'] = 'GET';
-  $response = drupal_http_request('http://gmod-dev.nal.usda.gov/webapp/home', $options);
-   /*
+    // Create a cookie for the browser.
+    setcookie('sessionid', $data->sessionid);   
     $is_account_exists =  db_query("select * from {users} where name = :name", array(':name' => $name))->fetchObject();
     if(!$is_account_exists) {
       //If not account then insert user details into drupal users table
-      // Register this new user.
+      //Register this new user.
       require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
       require_once DRUPAL_ROOT . '/' . variable_get('bootstrap.inc', 'includes/bootstrap.inc');
 
       $userinfo = array(
         'name' => $name,
         'pass' => $pass,
-        'mail' => $name,
+        'mail' => $data->email,
         'init' => $name,
         'status' => 1,
         'access' => REQUEST_TIME,
@@ -123,7 +116,7 @@ exit;
         drupal_set_message(t("Error saving user account."), 'error');
         return;
       }
-    }*/
+    }
   }
 }
 

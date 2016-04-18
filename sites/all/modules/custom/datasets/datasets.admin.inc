@@ -385,6 +385,7 @@ function dataset_report($form, &$form_state) {
               array("data" => t('Email'), 'field' => 'email'),
 	      array("data" => t('Organism'), 'field' => 'organism', 'org' => 'vj'),
 	      array("data" => t('Type'), 'field' => 'type'),
+              array("data" => t('Loggedin User'), 'field' => 'uid'),
 	      array("data" => t('Created'), 'field' => 'created'),		  
 	      array(),			
         ); 
@@ -394,7 +395,7 @@ function dataset_report($form, &$form_state) {
   $sql=$order['sql']; 
   if($sort=='desc') {
     usort($rows, function($a, $b) use($sql) {
-      $order_fields = array('name' => 0, 'email' => 1, 'organism' => 2, 'type' => 3, 'created' => 4); 
+      $order_fields = array('name' => 0, 'email' => 1, 'organism' => 2, 'type' => 3, 'created' => 5); 
       $okey = $order_fields[$sql];
       return strtolower($a[$okey]) > strtolower($b[$okey])? -1 : 1;
     });
@@ -402,7 +403,7 @@ function dataset_report($form, &$form_state) {
   }
   if($sort=='asc') {
       usort($rows, function($a, $b) use ($sql) {
-        $order_fields = array('name' => 0, 'email' => 1, 'organism' => 2, 'type' => 3, 'created' => 4);
+        $order_fields = array('name' => 0, 'email' => 1, 'organism' => 2, 'type' => 3, 'created' => 5);
         $okey = $order_fields[$sql];
         return strtolower($a[$okey]) < strtolower($b[$okey])? -1 : 1;
       });
@@ -482,7 +483,7 @@ function datasets_all($organism) {
   // Select table
   $query = db_select("ds_organism_assembly", "c");
   // Select fields
-  $query->fields("c", array("oa_id", "name", "email", "organism", "created"));  
+  $query->fields("c", array("oa_id", "name", "email", "organism", "uid", "created"));  
   // condition
   if(!empty($organism)) {
     $query->condition('organism', $organism);  
@@ -502,6 +503,8 @@ function datasets_all($organism) {
     $rows[$i][] = $data->email;
     $rows[$i][] = $organism_options[$data->organism];
     $rows[$i][] = "Assembly";
+    $user = user_load($data->uid);
+    $rows[$i][] = (!empty($user))?$user->name:'';
     $rows[$i][] = date('M d Y', $data->created);
 	
     $rows[$i][] = l('view', '/datasets_og/'.$data->oa_id.'/view',  array('attributes' => array('target'=>'_blank')));
@@ -511,7 +514,7 @@ function datasets_all($organism) {
   // Gene prediction   
   $query_gene = db_select("ds_gene_prediction", "c");
   // Select fields
-  $query_gene->fields("c", array("pid", "name", "email", "organism", "created"));  
+  $query_gene->fields("c", array("pid", "name", "email", "organism", "uid", "created"));  
    // condition
   if(!empty($organism)) {
     $query_gene->condition('organism', $organism);  
@@ -527,7 +530,9 @@ function datasets_all($organism) {
       $rows[$i][] = $data_gene->name;
 	  $rows[$i][] = $data_gene->email;
 	  $rows[$i][] = $organism_options[$data_gene->organism];
-	  $rows[$i][] = "Gene Prediction";
+	  $rows[$i][] = "Gene Prediction"; 
+          $user = user_load($data_gene->uid);
+          $rows[$i][] = (!empty($user))?$user->name:'';
 	  $rows[$i][] = date('M d Y', $data_gene->created);
 	
 	  $rows[$i][] = l('view', '/datasets_gp/'.$data_gene->pid.'/view',  array('attributes' => array('target'=>'_blank')));
@@ -538,7 +543,7 @@ function datasets_all($organism) {
   // Mapped dataset - Select table
   $query_map = db_select("ds_mapped_dataset", "c");
   // Select fields
-  $query_map->fields("c", array("id", "name", "email", "organism", "created"));  
+  $query_map->fields("c", array("id", "name", "email", "organism", "uid", "created"));  
    // condition
   if(!empty($organism)) {
     $query_map->condition('organism', $organism);  
@@ -558,6 +563,8 @@ function datasets_all($organism) {
 	  $rows[$i][] = $data_map->email;
 	  $rows[$i][] = $organism_options[$data_map->organism];
 	  $rows[$i][] = "Mapped dataset";
+          $user = user_load($data_map->uid);
+          $rows[$i][] = !empty($user)?$user->name:'';
 	  $rows[$i][] = date('M d Y', $data_map->created);
 	
 	  $rows[$i][] = l('view', '/datasets_md/'.$data_map->id.'/view',  array('attributes' => array('target'=>'_blank')));
