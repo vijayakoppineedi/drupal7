@@ -30,6 +30,16 @@ function custom_i5k_menu() {
 }
 
 /**
+ *  Implements hook_menu_alter
+ */
+function custom_i5k_menu_alter(&$items)
+{
+   unset($items['user/password']);
+   $items['image_permission/new'] = $items['node/add/fillpdf-form'];
+   unset($items['node/add/fillpdf-form']);
+}
+
+/**
  *  Retrieving the email id for the selected community contact on the organism page.
  *  @params $nid
  *  $nid looks like  85492D0, 85492D1 etcs., so exploding the
@@ -60,13 +70,13 @@ function get_community_contact_emailid($nid) {
 /**
  *  Redirecting to home page after user login.
  */
-function custom_i5k_user_login(&$edit, $account) {
+/*function custom_i5k_user_login(&$edit, $account) {
   if (!isset($_POST['form_id']) || $_POST['form_id'] != 'user_pass_reset') {
     if(in_array('authenticated user', $account->roles)) {
       $_GET['destination'] = 'home';
     }
   }
-} 
+} */
 
 /**
  * Pull the statistics from the json file
@@ -160,9 +170,20 @@ function custom_i5k_form_alter(&$form, &$form_state, $form_id) {
   } else if($form_id == 'contact_site_form') {
     $form['#validate'][] = 'custom_contact_form_validate';
   } else if($form_id == 'user_pass') {    
-	$form = Array();
-	form_set_error("", "Access Denied.");
-  }  
+    $form = Array();
+    form_set_error("", "Access Denied.");
+  } else if($form_id == 'user_login') {
+    drupal_add_css(drupal_get_path('module', 'custom_i5k') . '/theme/css/user_login.css');
+    $form['contact_text'] = array(
+          '#type' => 'item',
+          '#markup' => '<div id="user_contact_text_css">Don\'t have an account? <a href=\'/contact\'>Contact us</a> if you\'d like to submit data to us and need an account.</div>',
+          '#weight' => 101,
+    );
+    $user_login_final_validate_index = array_search('user_login_final_validate', $form['#validate']);
+    if ($user_login_final_validate_index >= 0) {
+      $form['#validate'][$user_login_final_validate_index] = 'custom_user_login_final_validate';
+    }
+  } 
 
  return $form; 
 }
@@ -302,8 +323,6 @@ function custom_i5k_block_view($delta = '') {
 function show_annotations($nid) { 
   drupal_add_css(drupal_get_path('module', 'custom_i5k') . '/theme/css/annotation.css');
 
-
-
   $node = node_load($nid);  
   // Search for the Annotation Methods links and get/extract the node ids from the links
   $html = '<div class="annotation_details">';
@@ -439,4 +458,40 @@ function custom_i5k_update_7110(&$sandbox) {
  return t('Updated all gene page urls to the geneId');
 }
  
+
+
+function custom_user_login_final_validate($form, &$form_state) {
+  if (empty($form_state['uid'])) {
+    // Always register an IP-based failed login event.
+    flood_register_event('failed_login_attempt_ip', variable_get('user_failed_login_ip_window', 3600));
+    // Register a per-user failed login event.
+    if (isset($form_state['flood_control_user_identifier'])) {
+      flood_register_event('failed_login_attempt_user', variable_get('user_failed_login_user_window', 21600), $form_state['flood_control_user_identifier']);
+    }
+
+    if (isset($form_state['flood_control_triggered'])) {
+      if ($form_state['flood_control_triggered'] == 'user') {
+        form_set_error('name', format_plural(variable_get('user_failed_login_user_limit', 5), 'Sorry, there has been more than one failed login attempt for this account. It is temporarily blocked. Try again later or <a href="@url">request a new password</a>.', 'Sorry, there have been more than @count failed login attempts for this account. It is temporarily blocked. Try again later or <a href="@url">request a new password</a>.', array('@url' => url('user/password'))));
+      }
+      else {
+        // We did not find a uid, so the limit is IP-based.
+        form_set_error('name', t('Sorry, too many failed login attempts from your IP address. This IP address is temporarily blocked. Try again later or <a href="@url">request a new password</a>.', array('@url' => url('user/password'))));
+      }
+    }
+    else {
+      // Use $form_state['input']['name'] here to guarantee that we send
+      // exactly what the user typed in. $form_state['values']['name'] may have
+      // been modified by validation handlers that ran earlier than this one.
+      $query = isset($form_state['input']['name']) ? array('name' => $form_state['input']['name']) : array();
+      form_set_error('name', t('Contact i5k@ars.usda.gov if you\'ve forgotten your username or password'));
+      watchdog('user', 'Login attempt failed for %user.', array('%user' => $form_state['values']['name']));
+    }
+  }
+  elseif (isset($form_state['flood_control_user_identifier'])) {
+    // Clear past failures for this user so as not to block a user who might
+    // log in and out more than once in an hour.
+    flood_clear_event('failed_login_attempt_user', $form_state['flood_control_user_identifier']);
+  }
+}
+
 

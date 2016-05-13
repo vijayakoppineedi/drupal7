@@ -14,7 +14,7 @@
  */
 function datasets_menu() {
   $items = array();
-  
+ 
   $items['datasets/mapped'] = array(
     'title' => 'Mapped Dataset Form',
     'page callback' => 'drupal_get_form',
@@ -34,7 +34,7 @@ function datasets_menu() {
   );
   
   $items['datasets/assembly-data'] = array(
-    'title' => 'Add Organism Assembly Information',
+    'title' => 'Add Genome Assembly Information',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('assembly_data'),    
     'access arguments' => array('access datasets'),
@@ -110,7 +110,7 @@ function datasets_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'datasets.admin.inc',
   );
-  
+ // echo "test "; print_r($items);echo "</pre>";exit;
   return $items;
 }
 /**
@@ -259,12 +259,14 @@ function mapped_dataset($form, &$form_state) {
   // Since dropdown return TRUE or FALSE, we have to check that
   // $form_state has been filled as well as what it contains.
   if (!empty($form_state['input']['is_publish']) && isset($form_state['input']['is_publish'])) {      
-    $description = ($form_state['input']['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether Toronto/Ft. Lauderdale conditions of data re-use should apply');	
+
+    $description = ($form_state['input']['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether <a href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3073843/?tool=pubmed" target="_BLANK">Toronto</a>/<a href="http://www.wellcome.ac.uk/stellent/groups/corporatesite/@policy_communications/documents/web_document/wtd003207.pdf" target="_BLANK">Ft. Lauderdale</a> conditions of data re-use should apply');
+
+//    $description = ($form_state['input']['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether Toronto/Ft. Lauderdale conditions of data re-use should apply');	
     $publish_title = 'publish_field_data';	
     $form['publish'][$publish_title] = array(
       '#type' => 'textfield',
-      '#title' => t('If ').$form_state['input']['is_publish'],
-      '#description' => $description
+      '#title' => t('If ').$form_state['input']['is_publish'].', '.$description,
     );
   } 
   // To make the fieldset collapsible
@@ -448,8 +450,10 @@ function mapped_dataset_validate($form, &$form_state) {
      form_set_error('affiliation', t('Your 
 	 Affiliation can only contains numbers, letters @  - _.'));
   }
- if(!empty($values['is_publish']) && empty($values['publish_field_data'])) {
-    form_set_error('publish_field_data', t('Enter the reason for assembly published.'));
+
+   if(!empty($values['is_publish']) && empty($values['publish_field_data'])) {
+     $description = ($values['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether <a href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3073843/?tool=pubmed" target="_BLANK">Toronto</a>/<a href="http://www.wellcome.ac.uk/stellent/groups/corporatesite/@policy_communications/documents/web_document/wtd003207.pdf" target="_BLANK">Ft. Lauderdale</a> conditions of data re-use should apply');
+    form_set_error('publish_field_data', t('The field \'If '.$values['is_publish']).' '.$description.'\' is required');
   }
 
   if(!empty($values['gender']) && ($values['gender'] == 'NA') && empty($values['other_gender'])) {
@@ -569,12 +573,17 @@ function mapped_dataset_submit($form, &$form_state) {
     drupal_set_message(t('Failed to send e-mail.'));
   } else
     drupal_set_message(t('Your mapped dataset data was submitted successfully. For your reference we are sending out an email with the fields filled.'));
-
-
 }
+
 // ---------------  AJAX CALLBACK  FUNCTIONS FOR TEXT FIELD-----------------
-function data_publish_dropdown_callback($form, $form_state) {
+function data_publish_dropdown_callback($form, &$form_state) {
   return $form['publish'];
+}
+
+
+// --------------AJAX CALLBACK FOR GENE ASSEMBLY PUBLISH DROP DOWN --------
+function gene_data_publish_dropdown_callback($form, &$form_state) {
+  return $form['gene_set']['publish'];
 }
 
 function gender_dropdown_callback($form, $form_state) {
@@ -802,6 +811,15 @@ function request_project_validate($form, &$form_state) {
   if (!valid_email_address($form_state['values']['email'])) {
     form_set_error('email', t('You must enter a valid e-mail address.'));
   }
+ /* $genus = $form_state['values']['genus'];
+  $species = $form_state['values']['species'];
+  $is_species_exists = db_select('organism','o')->fields('o',array('organism_id'))->condition('o.genus',$genus,'=')->condition('o.species', $species, '=')->execute()->fetchField();
+
+  if(!empty($is_species_exists)) {
+    form_set_error('genus', t('The species "'.$genus.' '.$species.'" already existed in database.'));
+    form_set_error('species');
+  }*/
+ 
 }
 
 /**
@@ -957,11 +975,12 @@ function datasets_mail($key, &$message, $params) {
   
       $message['body'][] = $message_body;
       $message['body'][] = '<Br><br>Best,<br><bR>The i5k Workspace team';
+      $message['headers']['Bcc'] = 'i5k@ars.usda.gov';
       $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed';
       break;
     case 'assembly_dataset_email':      
       $message['subject'] = t('Assembly dataset for '.$params['organism'], $variables, array('langcode' => $language->language));	
-      $message['body'][] = t("Dear ".$params['name'].", <br><br> Thank you for submmiting the assembly dataset for ".rtrim($params['organism']).".", $variables, array('langcode' => $language->language));    
+      $message['body'][] = t("Dear ".$params['name'].", <br><br> Thank you for submmiting the assembly dataset for ".rtrim($params['organism']).". The i5k Workspace will review your submission and send you information on how to upload your dataset as soon as possible.", $variables, array('langcode' => $language->language));    
 
       $message['body'][] = "<h1>Submission details:</h1>"; 
       $message_body .= "<b>Genome Co-ordinator information:</b><br>";
@@ -978,7 +997,7 @@ function datasets_mail($key, &$message, $params) {
       if(isset($params['is_curate_assembly']) && $params['is_curate_assembly'] == 'Yes') {
         $message_body .= "Co-ordinator name: ".$params['manual_curation_name']."<bR>";
         $message_body .= "Co-ordinator Email: ".$params['manual_curation_email']."<bR>";
-        $message_body .= "Do you need assistance developing an OGS? ".$params['need_assistance']."<bR>";
+        $message_body .= "Do you need assistance developing an Official Gene Set? ".$params['need_assistance']."<bR>";
         if(isset($params['need_assistance']) && ($params['need_assistance'] == 'Yes'))
           $message_body .= "Reason: ".$params['reason']."<bR>";
 
@@ -1026,6 +1045,7 @@ function datasets_mail($key, &$message, $params) {
   
       $message['body'][] = $message_body;
       $message['body'][] = '<Br><br>Best,<br><bR>The i5k Workspace team';
+      $message['headers']['Bcc'] = 'i5k@ars.usda.gov';
       $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed';
       break;
     case 'gene_prediction_email':      
@@ -1048,15 +1068,18 @@ function datasets_mail($key, &$message, $params) {
       $message_body .= "Name: ".$params['gene_name']."<br>";
       $message_body .= "Version: ".$params['gene_version']."<br>";
       $message_body .= "Descriptive Track: ".$params['descriptive_track']."<br>";
-      $message_body .= "Is this an OGS: ".$params['is_ogs']."<br>";
+      $message_body .= "Is this an Official Gene Set: ".$params['is_ogs']."<br>";
       if($params['is_ogs'] == 'Yes')
-        $message_body .= "If Yes: ".$params['reason']."<br>";
-
+        $message_body .= "Should we create gene pages for this gene set?: ".$params['reason']."<br>";
+      $message_body .= "Are the data published? ".$params['is_publish']."<br>";
+      $message_body .= "If ".$params['is_publish'].": ".$params['publish_field_data']."<br>";
+      $message_body .= "Should we make this file available for download in our Data Downloads section?: ".$params['is_download']."<bR>";
       $message_body .= "<br><b>Filename & md5sum:</b>";  
       $message_body .= "<br>".$filename_md5sum;
 	  
       $message['body'][] = $message_body;
       $message['body'][] = '<Br><br>best,<br><bR>The i5k Workspace team';
+      $message['headers']['Bcc'] = 'i5k@ars.usda.gov';
       $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed';
       break;
   }
@@ -1170,36 +1193,6 @@ function assembly_data($form, &$form_state) {
     '#description' => t("Provide the image url"),
   );
 
-
-/*  $portal_options = Array('Yes' => 'Yes', 'No' => 'No');
-  
-  $form['project']['is_portal'] = array(
-    '#type' => 'select', 
-    '#title' => t('Is another genome portal already hosting this assembly?'),    
-    '#options' => $portal_options,
-    '#ajax' => array(      
-      'callback' => 'portal_dropdown_callback',
-      'wrapper' => 'portal',
-    ),
-   '#limit_validation_errors' => array(),
-    '#required' => TRUE,
-  );
-  
-  $form['project']['portal'] = array(
-    '#type' => 'fieldset',    	  
-    '#prefix' => '<div id="portal">',
-    '#suffix' => '</div>',    
-   );	
-  
-  if(!empty($form_state['input']['is_portal']) && ($form_state['input']['is_portal'] == 'Yes')) {  
-    $form['project']['portal']['portal_yes'] = array(
-      '#type' => 'textfield',    
-      '#title' => t('Please enter the genome portal that already hosts your genome, so we can ensure there are no conflicts of interest'),      
-      '#size' => 40,
-    );
-  } 
-  */
-
   $curate_options = Array('Yes' => 'Yes', 'No' => 'No');
   $form['project']['is_curate_assembly'] = array(
     '#type' => 'select', 
@@ -1283,7 +1276,7 @@ function assembly_data($form, &$form_state) {
    $assistance_options = Array('Yes' => 'Yes', 'No' => 'No'); 
    $form['project']['manual_curation']['need_assistance'] = array(
       '#type' => 'select',    
-      '#title' => t('Do you need assistance developing an OGS?'), 
+      '#title' => t('Do you need assistance developing an Official Gene Set?'), 
       '#options' => $assistance_options,
       '#ajax' => array(      
            'callback' => 'assistance_dropdown_callback',
@@ -1320,24 +1313,6 @@ function assembly_data($form, &$form_state) {
    );
  }   
   
-  // Project information
- /* $form['project_info'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Project Information'),
-    '#attributes' => array('class' => array('project_info')),
-    '#collapsible' => TRUE, // Added
-    '#collapsed' => FALSE,  // Added
-  );
-  $form['project_info']['description'] = array(
-    '#type' => 'textarea', 
-    '#title' => t('Project description for your organism page'),    
-    '#required' => TRUE,
-  );
-  $form['project_info']['organism_image_url'] = array(
-    '#type' => 'textfield',    
-    '#title' => t('Image for your organism page'),    
-    '#description' => t("Provide the image url"),
-  );*/ 
   
   //Genome assembly information
   $form['assembly'] = array(
@@ -1362,7 +1337,7 @@ function assembly_data($form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t('Geo location'),
     '#required' => FALSE,
-    '#description' => "Geographical localtion of specimen collection (Country, Site, Latitude, Longitude)",	
+    '#description' => "Geographical location of specimen collection (Country, Site, Latitude, Longitude)",	
   );
   $form['assembly']['data_source']['tissues_located'] = array(
     '#type' => 'textfield',
@@ -1485,7 +1460,7 @@ function assembly_data($form, &$form_state) {
   // Since dropdown return TRUE or FALSE, we have to check that
   // $form_state has been filled as well as what it contains.
   if (!empty($form_state['input']['is_publish']) && isset($form_state['input']['is_publish'])) {      
-    $description = ($form_state['input']['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether Toronto/Ft. Lauderdale conditions of data re-use should apply');	
+    $description = ($form_state['input']['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether <a href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3073843/?tool=pubmed" target="_BLANK">Toronto</a>/<a href="http://www.wellcome.ac.uk/stellent/groups/corporatesite/@policy_communications/documents/web_document/wtd003207.pdf" target="_BLANK">Ft. Lauderdale</a> conditions of data re-use should apply');	
     $publish_title = 'publish_field_data';	
 
     $form['assembly']['info']['assembly_publish'][$publish_title] = array(
@@ -1647,7 +1622,8 @@ function assembly_data_validate($form, &$form_state) {
 
   
   if(!empty($values['is_publish']) && empty($values['publish_field_data'])) {
-    form_set_error('publish_field_data', t('Enter the reason for assembly published.'));
+     $description = ($values['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether <a href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3073843/?tool=pubmed" target="_BLANK">Toronto</a>/<a href="http://www.wellcome.ac.uk/stellent/groups/corporatesite/@policy_communications/documents/web_document/wtd003207.pdf" target="_BLANK">Ft. Lauderdale</a> conditions of data re-use should apply');
+    form_set_error('publish_field_data', t('The field \'If '.$values['is_publish']).' '.$description.'\' is required');
   }
 
   if(!empty($values['gender']) && ($values['gender'] == 'NA') && empty($values['other_gender'])) {
@@ -1755,7 +1731,7 @@ function assembly_data_submit($form, &$form_state) {
     /*handle send fail, $sent ===false when mail fails, but it won't always recognize a failure*/
     drupal_set_message(t('Failed to send e-mail.'));
   } else
-    drupal_set_message(t('Your data was submitted successfully. For your reference we are sending out an email with the fields filled.'));
+    drupal_set_message(t('Your data was submitted successfully. The i5k Workspace will review your submission and send you information on how to upload your dataset as soon as possible. For your reference we are sending out an email with the fields filled.'));
   
 }
 
@@ -1795,6 +1771,9 @@ function gene_prediction($form, &$form_state) {
     drupal_get_path('module', 'datasets') . '/css/gene_prediction.css',
   ); 
 
+  $form['information_markup'] = array(
+    '#markup' => t('<div id="info_markup">Please note that this dataset will be visible to the public in the JBrowse genome browser. Contact us if this dataset needs to remain private.</div>'),
+  );
 
   $web_apollo_organism = variable_get('web_apollo_organism');
   if(!empty($web_apollo_organism)) {    
@@ -1821,12 +1800,15 @@ function gene_prediction($form, &$form_state) {
      
   $form['analysis_method']['program'] = array(
     '#type' => 'textfield',
-    '#title' => t('Program'),	
+    '#preffix' => 'TEST',
+    '#title' => t('Program'),	    
+    '#description' => t('Program can be short description or PubMedID'),
     '#required' => TRUE	
   );
   $form['analysis_method']['version'] = array(
     '#type' => 'textfield',
     '#title' => t('version'),	
+    '#description' => t('Enter \'n/a\' if no version is available or applicable'), 
     '#required' => TRUE	
   );
   $form['analysis_method']['additional_info'] = array(
@@ -1929,7 +1911,7 @@ function gene_prediction($form, &$form_state) {
   );
   $form['gene_set']['descriptive_track'] = array(
     '#type' => 'textfield',
-    '#title' => t('Descriptive track<br> name for JBrowse<br> and Apollo'),	   
+    '#title' => t('Descriptive track name for JBrowse and Apollo'),	   
     '#description' => t('(This is how you and others will identify the track in Jbrowse and Apollo - short yet descriptive is best)'),
     '#required' => TRUE	
   );
@@ -1956,10 +1938,60 @@ function gene_prediction($form, &$form_state) {
     $reason_options = Array('' => '- Select -' ,'Yes' => 'Yes', 'No' => 'No');
     $form['gene_set']['ogs']['reason'] = array(
       '#type' => 'select',    	        
-      '#title' => t('Should we create gene<br> pages for this gene set'),
+      '#title' => t('Should we create gene pages for this gene set?'),
       '#options' => $reason_options,
     ); 
   } 
+  
+  /*************************/
+
+  $publish_options = Array('' => 'Select',
+                           'Yes' => 'Yes',
+                           'No' => 'No');
+  $selected = isset($form_state['values']['is_publish']) ? $form_state['values']['is_publish'] : key($publish_options);
+
+  $form['gene_set']['is_publish'] = array(
+    '#type' => 'select',
+    '#options' => $publish_options,
+    '#title' => t('Are the data published?'),
+    '#default_value' => $selected,
+    '#ajax' => array(
+      'callback' => 'gene_data_publish_dropdown_callback',
+      'wrapper' => 'publish',
+    ),
+    '#required' => TRUE
+  );
+
+  $form['gene_set']['publish'] = array(
+    '#prefix' => '<div id="publish">',
+    '#suffix' => '</div>',
+    '#type' => 'fieldset',
+  );
+
+  // Since dropdown return TRUE or FALSE, we have to check that
+  // $form_state has been filled as well as what it contains.
+  if (!empty($form_state['input']['is_publish']) && isset($form_state['input']['is_publish'])) {
+     $description = ($form_state['input']['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether <a href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3073843/?tool=pubmed" target="_BLANK">Toronto</a>/<a href="http://www.wellcome.ac.uk/stellent/groups/corporatesite/@policy_communications/documents/web_document/wtd003207.pdf" target="_BLANK">Ft. Lauderdale</a> conditions of data re-use should apply');
+
+//    $description = ($form_state['input']['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether Toronto/Ft. Lauderdale conditions of data re-use should apply');
+    $publish_title = 'publish_field_data';
+    $form['gene_set']['publish'][$publish_title] = array(
+      '#type' => 'textfield',
+      '#title' => t('If ').$form_state['input']['is_publish'].', '.$description,
+    );
+  }
+
+
+/******************/
+
+  $is_download_options = Array('Yes' => 'Yes', 'No' => 'No');
+  $form['gene_set']['is_download'] = array(
+    '#type' => 'select',
+    '#title' => t('Should we make this file available for download in our <a href="/content/data-downloads" target="_BLANK">Data Downloads</a> section?'),
+    '#options' => $ogs_options,
+    '#limit_validation_errors' => array(),
+    '#required' => TRUE,
+  );
   
   $form['upload_entry'] = array(
     '#type' => 'fieldset',
@@ -2068,11 +2100,16 @@ function gene_prediction_validate(&$form, &$form_state) {
 	 Affiliation can only contains numbers, letters @  - _.'));
   }
  
-  if(!empty($values['is_ogs']) && empty($values['reason'])) {
+  if(!empty($values['is_ogs']) && ($values['is_ogs'] == 'Yes') && empty($values['reason'])) {
     form_set_error('reason', t('Enter the reason OGS.'));
   }
-
  
+  if(!empty($values['is_publish']) && empty($values['publish_field_data'])) {
+     $description = ($values['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether <a href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3073843/?tool=pubmed" target="_BLANK">Toronto</a>/<a href="http://www.wellcome.ac.uk/stellent/groups/corporatesite/@policy_communications/documents/web_document/wtd003207.pdf" target="_BLANK">Ft. Lauderdale</a> conditions of data re-use should apply');
+    form_set_error('publish_field_data', t('The field \'If '.$values['is_publish']).' '.$description.'\' is required');
+  }
+
+
   foreach($values as $key => $value) {
     if(preg_match('/^filename_/', $key, $match)) {
       if(!preg_match('!^[\w .-/]*$!', $value)) {
@@ -2144,11 +2181,12 @@ function gene_prediction_submit($form, &$form_state) {
       }	
     }
   }
+
   $other_methods = rtrim($other_methods, ',');
   $filename = rtrim($filename, ',');
   $md5sum = rtrim($md5sum, ',');
   array_push($names_col, 'other_methods');
-  array_push($values_col, "'".$other_methods,"'");
+  array_push($values_col, "'".$other_methods."'");
   array_push($names_col, 'filename');
   array_push($values_col, "'".$filename."'");
   array_push($names_col, 'md5sum');
@@ -2160,7 +2198,7 @@ function gene_prediction_submit($form, &$form_state) {
   
   $names = implode(',', $names_col);
   $data = implode(',', $values_col);  
-  //echo "insert into public.ds_gene_prediction($names) values($data)";exit; 
+//echo "insert into public.ds_gene_prediction($names) values($data)";exit; 
  
   db_query("insert into public.ds_gene_prediction($names) values($data)"); 
   // E-mail address of the sender: as the form field is a text field.  

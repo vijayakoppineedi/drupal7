@@ -8,6 +8,7 @@ $output = '';
     $output .= '<tr><td>Name</td><td>: '.$form['datasets_table']['fullname']['#value']."</td></tr>";  
     $output .= '<Tr><td>Email</td><td>: '.$form['datasets_table']['email']['#value']."</td></tr>";
     $output .= '<tr><td>Scientific Name</td><td>: '.$form['datasets_table']['genus']['#value']." ".$form['datasets_table']['species']['#value']."</td></tr>";
+    $output .= '<tr><td>NCBI TaxId</td><td>: '.$form['datasets_table']['ncbi_taxid']['#value']."</td></tr>"; 
     $output .= '<tr><td>Genome Assembly hosted?</td><td>: '.$form['datasets_table']['genome_assembly_hosted']['#value'].'</td></tr>';   
     $output .= '<tr><td>Has submitted GA to NCBI?</td><td>: '.$form['datasets_table']['is_ncbi_submitted']['#value']."</td></tr>";
     $output .= '<tr><td>Re-assembly or New assembly</td><td>: '.$form['datasets_table']['is_assembly']['#value']."</td></tr>";

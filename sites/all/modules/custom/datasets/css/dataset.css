@@ -21,6 +21,11 @@
   width: 15.5%;
 }
 
+#edit-organism,
+#edit-is-publish {
+  width: 43.6%;
+}
+
 .form-item-geo-location {
   padding-top: 4px;
 }
@@ -140,3 +145,41 @@ fieldset.panel-default > legend.panel-heading {
 .form-required {
   color: red;
 }
+
+
+@media (max-width: 1225px) {
+  .m_class {
+    margin-left: 0px;
+    float: left;
+    min-width: 100%;
+  }
+  .f_class {
+    float: left;
+    min-width: 100%;
+  }
+  .captcha {
+    position: relative;
+    left: -85px;
+    width: 100%;
+  }
+  #edit-analysis-method label {
+    float: left;
+    width: 100%;
+  }
+  .f_class .form-item > input {
+    width: 100%;
+  }
+  .m_class .form-item > input {
+    width: 100%;
+  }
+  .form-item-is-publish label {
+    width: 100%;
+  }   
+
+ .form-item-organism label, .form-item-name label, .form-item-email label, .form-item-affiliation label, .form-item-geo-location label, .form-item-tissues-located label, .form-item-gender label, .form-item-sequence-platform label, .form-item-descriptive-track label, .form-item-data-source-url label, .form-item-program label, .form-item-version label, .form-item-additional-info label, .form-item-publish-field-data label {
+    float: left;
+    width: 100%;
+}
+  
+}
+

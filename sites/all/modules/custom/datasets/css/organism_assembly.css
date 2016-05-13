@@ -236,7 +236,7 @@ fieldset.captcha {
 }
 
 .form-textarea-wrapper #edit-description {
-  width: 30%;
+  width: 57%;
 }
 
 .form-item-description .form-textarea-wrapper .grippie {
@@ -316,4 +316,34 @@ div.container-inline-date .form-item-time-to-date > input {
 #assembly_files_markup {
   font-family: Arial, sans-serif;
   font-weight: 600;
+}
+
+@media (max-width: 1225px) {
+  .m_class {
+    margin-left: 0px;
+    float: left;
+    min-width: 100%;
+  }
+  .f_class {
+    float: left;
+    min-width: 100%;
+  }
+  .captcha {
+    position: relative;
+    left: -85px;
+    width: 100%;
+  }
+  .assembly label {
+    float: left;
+    width: 100%;
+  }
+  .f_class .form-item > input {
+    width: 100%;
+  } 
+  .m_class .form-item > input {
+    width: 100%;
+  }
+}
+
+
 }

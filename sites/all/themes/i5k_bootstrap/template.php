@@ -28,7 +28,13 @@ function i5k_preprocess_search_result(&$variables) {
   }
 }
 
-function i5k_new_preprocess_page(&$variables) {
+function i5k_bootstrap_preprocess_page(&$variables) {
+  //Overriding user login title
+  if (arg(0) == 'user' && arg(1) == 'login') {
+    $variables['title'] = t('i5k Workspace login');
+  } elseif (arg(0) == 'user' && arg(1) == '') {
+    $variables['title'] = t('i5k Workspace login');
+  }
   // Add information about the number of sidebars.
   if (!empty($variables['page']['sidebar_first']) && !empty($variables['page']['sidebar_second'])) {
     $variables['content_column_class'] = ' class="col-sm-4"';
@@ -40,3 +46,5 @@ function i5k_new_preprocess_page(&$variables) {
     $variables['content_column_class'] = ' class="col-sm-12"';
   }
 }
+
+

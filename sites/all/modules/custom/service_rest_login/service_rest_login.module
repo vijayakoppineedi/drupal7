@@ -5,15 +5,7 @@
  *  Provides a generic but powerful API for web services.
  */
 
- /*
- * Services UI is defined in the export-ui plugin.
- */
-function service_rest_login_menu() {
-  $items = array();
 
-
-  return $items;
-}
 
 function service_rest_login_user_login(&$edit, $account) {
   foreach($edit as $key => $user_data) {
@@ -82,7 +74,7 @@ function insert_before_login_submit($form, &$form_state) {
 //  $response->redirect_url = "https://stage-www.lcacommons.gov/discovery/login/ajaxSuccess";
 
   $data = json_decode($response->data);
- // echo "<pre> "; print_r($response); print_r($data); echo "</pre>";exit;
+// echo "<pre> "; print_r($response); print_r($data); echo "</pre>";exit;
 
   //IF Django authentication is success then check the user exists in drupal or not
   //If not insert into drupal

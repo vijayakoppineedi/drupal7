@@ -22,6 +22,7 @@ Name: <?php print $data[0]->gene_name; ?>  <br>
 Version: <?php print $data[0]->gene_version; ?><br>
 Descriptive Track: <?php print $data[0]->descriptive_track; ?><br>
 Is this an OGS?: <?php print $data[0]->is_ogs; ?><br>
+Should we make this file available for download in our Data Downloads section?: <?php print $data[0]->is_download; ?><bR>
 
 <?php if($data[0]->is_ogs == 'Yes') { ?>
 Reason: <?php print $data[0]->reason; ?> <br>
