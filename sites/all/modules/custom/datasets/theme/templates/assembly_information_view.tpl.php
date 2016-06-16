@@ -6,13 +6,11 @@ $data = $variables['data'];
 Name: <?php print $data[0]->name; ?><br>
 Email: <?php print $data[0]->email; ?><br>
 <b>Project Background</b><br>
-NCBI Tax id: <?php print $data[0]->taxid; ?><br>
 Organism: <?php print $data[0]->organism; ?><br>
 Common name: <?php print $data[0]->common_name; ?><br>
-Is another genome portal already hosting this assembly?: <?php print $data[0]->is_portal; ?><br>
-
-<?php if($data[0]->is_portal == 'Yes') { ?>
-Reason: <?php print $data[0]->portal_yes; ?><br>
+Project description for your organism page: <?php print $data[0]->description; ?><br>
+<?php if(!empty($data[0]->organism_image_url)) { ?>
+Image for your organism page: <?php print $data[0]->organism_image_url; ?><br>
 <?php } ?>
 
 Will you manually curate this assembly using i5k workspace tools?: <?php print $data[0]->is_curate_assembly; ?><br>
@@ -28,13 +26,6 @@ Reason: <?php print $data[0]->reason; ?><br>
 
 Start date: <?php print date('M d Y', $data[0]->time_from); ?><br>
 End date: <?php print date('M d Y', $data[0]->time_to); ?><br>
-<?php } ?>
-
-<b>Project Information</b><br>
-Project description for your organism page: <?php print $data[0]->description; ?><br>
-
-<?php if(!empty($data[0]->organism_image_url)) { ?>
-Image for your organism page: <?php print $data[0]->organism_image_url; ?><br>
 <?php } ?>
 
 <b>Data source Information</b><br>
@@ -92,7 +83,10 @@ Other notes: <?php print $data[0]->other_notes; ?><br>
   $md5 = explode(',', $data[0]->md5sum);
   $file_md5sum = '';
   foreach($file as $key => $name) {
-	$file_md5sum .= "File name: ".$name."<br>md5sum: ".$md5[$key]."<br><br>";  
+    if(!empty($name))
+        $file_md5sum .= "File name: ".$name;
+    if(!empty($md5[$key]))
+       $file_md5sum .= "<br>md5sum: ".$md5[$key]."<br><br>";
   }
 ?>
 <?php print $file_md5sum; ?>

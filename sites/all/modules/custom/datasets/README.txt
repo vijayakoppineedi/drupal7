@@ -94,6 +94,9 @@ create table public.ds_gene_prediction(
   descriptive_track varchar(254) NOT NULL,
   is_ogs varchar(124) NOT NULL,
   reason varchar(254),
+  is_publish varchar(20) NOT NULL,
+  publish_field_data varchar(254),
+  is_download varchar(124),
   filename text NOT NULL,
   md5sum text NOT NULL,
   created integer default 0	
@@ -131,20 +134,20 @@ create table public.ds_mapped_dataset(
   created integer default 0	
 );  
 								 
-Steps:
+Steps: for New Organism
 1. Request new organism If its not there in dropdown
-   To request go to url: http://gmod-dev7.nal.usda.gov/add-organism
+   To request go to url: http://domain_url/datasets/request-project
 2. Once the user submitted the request organism, an email goes to administrator.
 3. Administrator checks and sees if the organism is worth to approve/reject.
 4. An email goes to the requested user about the organism approval if it is approved. If rejected he wont   receives and email.
 
 
 Requirements:
-1. Date module - install and enable it.
+1. Date module - install and enable it. dateapi and date_popup modules.
 2. honeypot module - install and enable it.
 
-2. create a "datasets" folder for organism image under sites/default/files/
-
+3. create a "datasets" folder for organism image under sites/default/files/
+4. create db_tables in databse.
 
 
 

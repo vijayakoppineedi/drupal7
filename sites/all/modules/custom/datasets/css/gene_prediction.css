@@ -44,14 +44,30 @@
 }
 
 select#edit-organism  {
-  width: 44.5%;
+  width: 37.5%;
 } 
 
 select#edit-reason {
-  width: 44.5%;
+  width: 37.5%;
 }
 select#edit-is-ogs {
-  width: 44.5%;
+  width: 37.5%;
+}
+
+select#edit-is-download {
+  width: 37.5%;
+}
+
+select#edit-is-publish {
+  width: 37.5%;
+}
+
+#publish fieldset {
+  border: 0px !important;
+}
+
+#publish  label {
+  width: 16% !important;
 }
 
 #gene-prediction fieldset,
@@ -84,7 +100,7 @@ fieldset.panel-default > legend.panel-heading {
 #edit-gene-set label,
 #edit-analysis-provider label {
   float: left;
-  min-width: 13%;
+  width: 17%;
 }
 
 #edit-analysis-method label {
@@ -125,6 +141,28 @@ fieldset.panel-default > legend.panel-heading {
   left: 254px;
 }
 
+#info_markup {
+  font-style: italic;
+  font-weight: 200;
+  font-size: 1.3em;
+  margin-bottom: 14px;
+}
+
+
+#edit-gene-set .form-item-is-download {
+  margin-bottom: 0px;
+}
+
+#edit-gene-set #download_css {
+  font-weight: bold; 
+}
+
+#files_markup {
+  font-family: Arial, sans-serif;
+  font-weight: 600;
+}
+
+
 /*
 .f_class label {
   margin-right: 10px;
@@ -136,3 +174,40 @@ fieldset.panel-default > legend.panel-heading {
   float: left;
   min-width: 10%;
 }*/
+
+
+@media (max-width: 1225px) {
+  .m_class {
+    margin-left: 0px;
+    float: left;
+    min-width: 100%;
+  }
+  .f_class {
+    float: left;
+    min-width: 100%;
+  }
+  .captcha {
+    position: relative;
+    left: -85px;
+    width: 100%;
+  }
+  #edit-gene-set label {
+    float: left;
+    width: 100% !important;
+  }
+  #publish {
+    margin-left: -9px;
+  }
+
+  .f_class .form-item > input {
+    width: 100%;
+  }
+  .m_class .form-item > input {
+    width: 100%;
+  }
+}
+
+
+}
+
+

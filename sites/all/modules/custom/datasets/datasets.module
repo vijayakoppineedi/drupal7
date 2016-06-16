@@ -16,9 +16,10 @@ function datasets_menu() {
   $items = array();
  
   $items['datasets/mapped'] = array(
-    'title' => 'Mapped Dataset Form',
+    'title' => 'Add Mapped Dataset Information',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mapped_dataset'),    
+    'access callback' => 'dataset_access_callback',
     'access arguments' => array('access datasets'),
     'type' => MENU_CALLBACK,
     'weight' => 100,
@@ -28,6 +29,7 @@ function datasets_menu() {
     'title' => 'Genome project initial inquiry form',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('request_project'),    
+    'access callback' => 'dataset_access_callback',
     'access arguments' => array('access datasets'),
     'type' => MENU_CALLBACK,
     'weight' => 100,
@@ -37,6 +39,7 @@ function datasets_menu() {
     'title' => 'Add Genome Assembly Information',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('assembly_data'),    
+    'access callback' => 'dataset_access_callback',
     'access arguments' => array('access datasets'),
     'type' => MENU_CALLBACK,
     'weight' => 100,
@@ -45,12 +48,22 @@ function datasets_menu() {
   $items['datasets/gene-prediction'] = array(
     'title' => 'Add Gene Prediction Information',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('gene_prediction'),    
+    'page arguments' => array('gene_prediction'),   
+    'access callback' => 'dataset_access_callback', 
     'access arguments' => array('access datasets'),
     'type' => MENU_CALLBACK,
     'weight' => 100,
   );
   
+  $items['register/project-dataset/account'] = array(
+    'title' => 'Register for a Project or Dataset Submission Account',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('project_dataset_submission_account'),
+    'access arguments' => array('access register form'),
+    'type' => MENU_CALLBACK,
+    'weight' => 100,
+  );
+
 
   $items['admin/structure/datasets'] = array(
     'title' => 'Datasets',
@@ -121,11 +134,27 @@ function datasets_permission() {
     'administer datasets' => array(
       'title' => t('Administer datasets'),
     ),
-	'access datasets' => array(
+    'access datasets' => array(
       'title' => t('Access datasets'),
+    ),
+    'access register form' => array(
+      'title' => t('access register form'),	
     ),
   );
 }
+
+/**
+ *  function dataset_access_callback
+ */
+function dataset_access_callback() {
+  global $user;
+  if ( arg(0) == 'datasets' && $user->uid == 0 ) {
+    drupal_goto('/user/login', array('query' => drupal_get_destination()));
+  }
+  return TRUE;
+}
+
+
 
 /**
  *  hook_form() Form to create mapped dataset
@@ -350,12 +379,18 @@ function mapped_dataset($form, &$form_state) {
   } 
   $form['upload_entry'] = array(
     '#type' => 'fieldset',
-    '#title' => t('if uploading to our ftp site, md5sum for each data file'),
+    '#title' => t('File Information'),
 	'#prefix' => '<div id="upload-fieldset-wrapper">',
     '#suffix' => '</div>',
 	'#collapsible' => TRUE, // Added
     '#collapsed' => FALSE,  // Added
   );
+  $form['upload_entry']['markup_text'] = array(
+    '#prefix' => '<div id="files_markup">',
+    '#markup' => t('Please enter the name and md5sum of your file(s). If you do not have an md5sum for your file, enter NA (not recommended for larger files). We will send you information on how to share the files themselves in a subsequent email.<br>'),
+    '#suffix' => '</div>'
+  );
+
 
   if (empty($form_state['pnum_upload'])) {
     $form_state['pnum_upload'] = 1;
@@ -413,10 +448,10 @@ function mapped_dataset($form, &$form_state) {
   
   // Enabling honeypot to avoid spam
   honeypot_add_form_protection($form, $form_state, array('honeypot', 'time_restriction'));
-  $form['captcha'] = array(
+  /*$form['captcha'] = array(
     '#type' => 'captcha',
     '#captcha_type' => 'datasets/Math',
-  );
+  );*/
 
 
   $form['submit'] = array(
@@ -455,11 +490,6 @@ function mapped_dataset_validate($form, &$form_state) {
      $description = ($values['is_publish'] == 'Yes')? t('please provide citation'):t('please indicate whether <a href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3073843/?tool=pubmed" target="_BLANK">Toronto</a>/<a href="http://www.wellcome.ac.uk/stellent/groups/corporatesite/@policy_communications/documents/web_document/wtd003207.pdf" target="_BLANK">Ft. Lauderdale</a> conditions of data re-use should apply');
     form_set_error('publish_field_data', t('The field \'If '.$values['is_publish']).' '.$description.'\' is required');
   }
-
-  if(!empty($values['gender']) && ($values['gender'] == 'NA') && empty($values['other_gender'])) {
-    form_set_error('other_gender', t('Enter the other sex field value.'));
-  }
- 
  
   if (!empty($values['data_source_url']) && !valid_url($values['data_source_url'], 'TRUE')) {
     form_set_error('data_source_url', t('You must enter a valid url.'));
@@ -516,7 +546,7 @@ function mapped_dataset_submit($form, &$form_state) {
     $organism_list = get_webapollo_organisms($web_apollo_organism);
   }
 
-  $exclude_fields = Array('i5kurl', 'honeypot_time', 'add_other_methods', 'remove_other_methods', 'add_other_uploads', 'remove_other_uploads', 'submit', 'form_build_id', 'form_token', 'form_id', 'op','captcha_token','captcha_sid', 'captcha_response', 'i5kurl', 'honeypot_time','captcha');
+  $exclude_fields = Array('i5kurl', 'honeypot_time', 'add_other_methods', 'remove_other_methods', 'add_other_uploads', 'remove_other_uploads', 'submit', 'form_build_id', 'form_token', 'form_id', 'op','captcha_token','captcha_sid', 'captcha_response', 'url', 'captcha');
   $names_col = Array();
   $values_col = Array();
   $created = time(); $other_methods = ''; $filename = ''; $md5sum = '';
@@ -524,17 +554,17 @@ function mapped_dataset_submit($form, &$form_state) {
   foreach($values as $key => $value) {
     if(!in_array($key, $exclude_fields)) {
       if(preg_match('/^other_methods_/', $key)) {
-        $other_methods .= $value.",";
+        $other_methods .= check_plain($value).",";
       }
       else if(preg_match('/^filename_/', $key)) {
-        $filename .= $value.",";
+        $filename .= check_plain($value).",";
       }
       else if(preg_match('/^md5sum_/', $key)) {
-        $md5sum .= $value.",";
+        $md5sum .= check_plain($value).",";
       }
       else if(isset($value) && !empty($value)){
        array_push($names_col, $key);
-       array_push($values_col, "'".$value."'");
+       array_push($values_col, "'".check_plain($value)."'");
       }
     }
   }
@@ -643,6 +673,22 @@ function upload_remove_latest_one($form, &$form_state) {
  * Organise captcha field to be right above the submit button 
  */
 function datasets_form_alter(&$form, &$form_state, $form_id) { 
+  if($form_id == 'fillpdf_form_node_form') {
+    // echo "<pre>"; print_r($form); echo "</pre>";
+     $form['field_photographer']['und'][0]['#title'] = 'Photographer/Author';
+     $form['#title'] = 'Image use permission form';
+     $form['fillpdf_header'] = array(
+        '#type' => 'item',
+        '#markup' => '<div><h5>
+The United States Department of Agriculture, Agricultural Research Service, National Agricultural Library (NAL) requests your permission to publish in all formats the material(s) indicated below at the i5K Workspace@NAL website. The target audience for the website are students, educators, researchers, and members of the general public. The main website is available without access restrictions at <a href="https://i5k.nal.usda.gov">https://i5k.nal.usda.gov</a>, and includes resources housed on multiple servers. 
+As with all Federal Government-issued content, the i5k Workspace@NAL is not copyrightable. Copyrighted material on the website will be acknowledged and accompanied by proper copyright notices. Please note that no licensing fees or royalties will be paid. To grant permission to publish the above-referenced material(s), fill out the form below,  sign the resulting PDF and e-mail to <a href="mailto:i5k@ars.usda.gov">i5k@ars.usda.gov</a>, or fax the signed form to "Attention: Christopher Childers".<hr> 
+I hereby grant permission to the United States Department of Agriculture to publish the material(s) specified below in the i5K Workspace@NAL. By Filling out and signing the form below, I represent myself as the sole owner of all rights in and to the photograph(s)/illustrations and that the photographs are original and do not infringe upon any statutory copyright or any common law right or proprietary right of any individual or organization. There is no fee for this use.<br> 
+</h5></div>',
+        '#weight' => -1,
+     );
+     $form['field_credit_line_and_copyright']['#suffix'] = '<div id="credit_copyright">(e.g. CC-­‐BY-­‐SA; see https://creativecommons.org or http://copyright.gov for more information)</div>';
+  }
+
 }
 
 /**
@@ -788,10 +834,10 @@ function request_project($form, &$form_state) {
 
   // Enabling honeypot to avoid spam
  // honeypot_add_form_protection($form, $form_state, array('honeypot', 'time_restriction'));
-  $form['captcha'] = array(
+ /* $form['captcha'] = array(
     '#type' => 'captcha',
     '#captcha_type' => 'datasets/Math',
-  );
+  );*/
 
   $form['submit'] = array(
     '#type' => 'submit',
@@ -811,14 +857,14 @@ function request_project_validate($form, &$form_state) {
   if (!valid_email_address($form_state['values']['email'])) {
     form_set_error('email', t('You must enter a valid e-mail address.'));
   }
- /* $genus = $form_state['values']['genus'];
+  $genus = $form_state['values']['genus'];
   $species = $form_state['values']['species'];
   $is_species_exists = db_select('organism','o')->fields('o',array('organism_id'))->condition('o.genus',$genus,'=')->condition('o.species', $species, '=')->execute()->fetchField();
 
   if(!empty($is_species_exists)) {
     form_set_error('genus', t('The species "'.$genus.' '.$species.'" already existed in database.'));
     form_set_error('species');
-  }*/
+  }
  
 }
 
@@ -833,20 +879,20 @@ function request_project_submit($form, &$form_state) {
   $created = time();   
   // data variable is used to send values to mail message
   $data = Array(
-        'genus' => $values['genus'],
-        'species' => $values['species'],
-        'ncbi_taxid' => $values['ncbi_taxid'],
-        'common_name' => $values['common_name'],
-        'genome_assembly_hosted' => $values['is_genome_assembly'],
-        'is_ncbi_submitted' => $values['is_ncbi_submitted'],
-        'is_assembly' => $values['is_assembly'],
-        'involved_in_generation' => $values['involved_in_generation'],
-        'description' => trim($values['description']),
-        'fullname' => trim($values['fullname']),
-        'email' => $values['email'],
+        'genus' => check_plain($values['genus']),
+        'species' => check_plain($values['species']),
+        'ncbi_taxid' => check_plain($values['ncbi_taxid']),
+        'common_name' => check_plain($values['common_name']),
+        'genome_assembly_hosted' => check_plain($values['is_genome_assembly']),
+        'is_ncbi_submitted' => check_plain($values['is_ncbi_submitted']),
+        'is_assembly' => check_plain($values['is_assembly']),
+        'involved_in_generation' => check_plain($values['involved_in_generation']),
+        'description' => trim(check_plain($values['description'])),
+        'fullname' => trim(check_plain($values['fullname'])),
+        'email' => check_plain($values['email']),
         'created' => $created
       );
-
+//echo "<pre>"; print_r($data); echo "</pre>";exit;
   // drupal_write_record('ds_request_project', $data); 
   $result = db_insert('ds_request_project')->fields($data)->execute() or die("Unable to insert data");
 
@@ -867,7 +913,7 @@ function request_project_submit($form, &$form_state) {
     drupal_set_message(t('Failed to send e-mail to the i5k admin.'));
   }
   else {
-    drupal_set_message("Request Project '".$values['sci_name']."' successfully created, you will receive an email once the request approved from an administrator."); 
+    drupal_set_message("Your Project Request '".$values['genus']." ".$values['species']."' was successfully created. You will receive an email once your request is approved by an administrator."); 
   }	
 }
 
@@ -876,7 +922,9 @@ function request_project_submit($form, &$form_state) {
  * to build the message
  */		
 function datasets_mail($key, &$message, $params) {
+  global $base_url, $base_path;
   $language = $message['language'];
+
   $variables = array(    
     '!organism' => $params['genus'].' '.$params['species'],  
     '!user' => $params['cordinator_name'],
@@ -888,10 +936,10 @@ function datasets_mail($key, &$message, $params) {
     if(preg_match('/^other_methods_/', $keyname)) {
       $other_methods .= $value.",";
     }
-    else if(preg_match('/^filename_/', $keyname)) {
+    else if(preg_match('/^filename_/', $keyname) && !empty($value)) {
       $filename_md5sum .= "Filename: ".$value."<br>";
     }
-    else if(preg_match('/^md5sum_/', $keyname)) {
+    else if(preg_match('/^md5sum_/', $keyname) && !empty($value)) {
       $filename_md5sum .= "md5sum: ".$value."<br><br>";
     }
   }
@@ -931,14 +979,35 @@ function datasets_mail($key, &$message, $params) {
  
       break;
     case 'request_project_approved_email':
-      $message['subject'] = t('Request Project Approved for "'.$params['genus'].' '.$params['species'].'"', $variables, array('langcode' => $language->language));
-      $message['body'][] = "Dear ".$params['fullname'].", <br><br>We have approved your request project for ".$params['genus'].' '.$params['species']."."; 
-      $message['body'][] = '<br>Now you can submit your datasets. <Br><br>Best,<br><bR>The i5k Workspace team';
+      $message['subject'] = t('i5k Workspace Project Request Approved for "'.$params['genus'].' '.$params['species'].'"', $variables, array('langcode' => $language->language));
+      $message['body'][] = "Dear ".$params['fullname'].", <br><br>We have approved your project request for ".$params['genus'].' '.$params['species']."."; 
+      $message['body'][] = '<br>You can submit your datasets. Please visit <a href="https://i5k.nal.usda.gov/data-submission-overview">https://i5k.nal.usda.gov/data-submission-overview</a> and navigate to the appropriate page to submit your genome assembly or other datasets for this project. <Br><br>Best,<br><bR>The i5k Workspace team';
+      $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed';
+      break;
+    case 'register_project_submission_account':
+      
+      $message['subject'] = t("".$params['name']." registered for project or data submission account", $variables, array('langcode' => $language->language)); 
+      $message['body'][] = "Below are the user details<br><br> ";
+      $message['body'][] = "<b>Name:</b> ".$params['name']."<br>";
+      $message['body'][] = "<b>Email:</b> ".$params['email']."<br>";
+      $message['body'][] = "<b>Affiliation:</b> ".$params['affiliation']."<br>";
+      $message['body'][] = "<b>Tell us about the data you want to submit or the project you want to start:</b> ".$params['content']."<br>";
+
+      $message['body'][] = "<br>To create an user account go to <a href='".$base_url . $base_path . "/admin/people'>". $base_url ." /admin/people</a><br> Then click \"Add User\"<br><br>";
+      $message['body'][] = "<p>In the User creation page, manually enter the username, email and a random password twice.<br> 
+                            Check the options for:<br>
+                            * i5k user<br>
+                            * Notify user of new account <br><br>
+
+                            Then click \"Create new account\"<br><br>
+
+                            The user will never see the password we generate for them.  They will be emailed a one time link to reset their password.</p>";
+
       $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed';
       break;
     case 'mapped_dataset_email':      
       $message['subject'] = t('Mapped dataset for '.$params['organism'], $variables, array('langcode' => $language->language));	
-      $message['body'][] = t("Dear ".$params['name'].", <br><br> Thank you for submmiting the mapped dataset for ".$params['organism'].".", $variables, array('langcode' => $language->language));    
+      $message['body'][] = t("Dear ".$params['name'].", <br><br> Thank you for submitting a mapped dataset for ".$params['organism'].". The i5k Workspace will review your submission and send you information on how to upload your dataset as soon as possible. ", $variables, array('langcode' => $language->language));    
 
       $message['body'][] = "<h1>Submission details:</h1>"; 
       $message_body = "<b>Data Provider:</b><br>";
@@ -980,7 +1049,7 @@ function datasets_mail($key, &$message, $params) {
       break;
     case 'assembly_dataset_email':      
       $message['subject'] = t('Assembly dataset for '.$params['organism'], $variables, array('langcode' => $language->language));	
-      $message['body'][] = t("Dear ".$params['name'].", <br><br> Thank you for submmiting the assembly dataset for ".rtrim($params['organism']).". The i5k Workspace will review your submission and send you information on how to upload your dataset as soon as possible.", $variables, array('langcode' => $language->language));    
+      $message['body'][] = t("Dear ".$params['name'].", <br><br> Thank you for submitting  an assembly dataset for ".rtrim($params['organism']).". The i5k Workspace will review your submission and send you information on how to upload your dataset as soon as possible.", $variables, array('langcode' => $language->language));    
 
       $message['body'][] = "<h1>Submission details:</h1>"; 
       $message_body .= "<b>Genome Co-ordinator information:</b><br>";
@@ -989,9 +1058,9 @@ function datasets_mail($key, &$message, $params) {
       $message_body .= "<b>Project Background:</b><bR>";
       $message_body .= "Organism: ".$params['organism']."<bR>";
       $message_body .= "Common name: ".$params['common_name']."<br>";
-      $message_body .= "Project description for your organism page: ".$params['description']."<bR>";
+      $message_body .= "Project description to display in your organism page: ".$params['description']."<bR>";
       if(!empty($params['organism_image_url']))
-        $message_body .= "Image for your organism page: ".$params['organism_image_url']."<bR>";
+        $message_body .= "Image URL for your organism page: ".$params['organism_image_url']."<bR>";
      
       $message_body .= "Will you manually curate this assembly using i5k workspace tools? ".$params['is_curate_assembly']."<bR>";
       if(isset($params['is_curate_assembly']) && $params['is_curate_assembly'] == 'Yes') {
@@ -1002,8 +1071,17 @@ function datasets_mail($key, &$message, $params) {
           $message_body .= "Reason: ".$params['reason']."<bR>";
 
         $message_body .= "<b>Curation time frame:</b><br>";
-        $message_body .= "From Date: ".$params['time_from']."<bR>";
-        $message_body .= "To Date: ".$params['time_to']."<bR>";
+        if ($params['no_timeframe'] == 1) {
+          $message_body .= "There is no set time frame for curation"; 
+        } else { 
+          $from_dd = explode('-', $params['time_from']);
+          $from_dd_format = $from_dd[1].'-'.$from_dd[2].'-'.$from_dd[0];
+          $message_body .= "From Date: ".$from_dd_format."<bR>";
+       
+          $to_dd = explode('-', $params['time_to']);
+          $to_dd_format = $to_dd[1].'-'.$to_dd[2].'-'.$to_dd[0];
+          $message_body .= "To Date: ".$to_dd_format."<bR>";
+        }
       }
 
       $message_body .= "<h3>Genome assembly information:</h3>";
@@ -1050,7 +1128,7 @@ function datasets_mail($key, &$message, $params) {
       break;
     case 'gene_prediction_email':      
       $message['subject'] = t('Gene prediction data for '.$params['organism'], $variables, array('langcode' => $language->language));	
-      $message['body'][] = t("Dear ".$params['name'].", <br><br> Thank you for submmiting the gene prediction for ".rtrim($params['organism']).".", $variables, array('langcode' => $language->language));    
+      $message['body'][] = t("Dear ".$params['name'].", <br><br> Thank you for submitting the gene prediction for ".rtrim($params['organism']).". The i5k Workspace will review your submission and send you information on how to upload your dataset as soon as possible. ", $variables, array('langcode' => $language->language));    
       
       $message['body'][] = "<h1>Submission details:</h1>"; 
       $message_body .= "<b>Analysis Methods:</b><br>";
@@ -1092,7 +1170,6 @@ function datasets_mail($key, &$message, $params) {
  */
 function assembly_data($form, &$form_state) {
   //$form['#tree'] = TRUE;
-
   $form['#attached']['css'] = array(
     drupal_get_path('module', 'datasets') . '/css/organism_assembly.css',
   );
@@ -1184,12 +1261,12 @@ function assembly_data($form, &$form_state) {
   
   $form['project']['description'] = array(
     '#type' => 'textarea',
-    '#title' => t('Project description for your organism page'),
+    '#title' => t('Project description to display in your organism page'),
     '#required' => TRUE,
   );
   $form['project']['organism_image_url'] = array(
     '#type' => 'textfield',
-    '#title' => t('Image for your organism page'),
+    '#title' => t('Image URL for your organism page. If you have a file instead of a URL, please contact <a href="mailto:i5k@ars.usda.gov">i5k@ars.usda.gov</a>'),
     '#description' => t("Provide the image url"),
   );
 
@@ -1293,27 +1370,71 @@ function assembly_data($form, &$form_state) {
    if(isset($form_state['input']['need_assistance']) && ($form_state['input']['need_assistance'] == 'Yes')) {
      $form['project']['manual_curation']['assistance']['reason'] = array(
        '#type' => 'textfield',    	        
-       '#title' => t('Reason')
+       '#title' => t('Reason'),
+       '#required' => TRUE,
      ); 
    }
-	
-   $form['project']['manual_curation']['time_from'] = array(
-     '#type' => 'date_popup',  
-     '#date_format' => 'd/m/Y',	  
-     '#title' => t('Specify curation time frame'),
-     '#attributes' => array('placeholder' => t('Start date')),	  
-     '#required' => TRUE,	  
+
+   $form['project']['manual_curation']['tf_condition_text'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Specify curation time frame <div id="tf_required">*</div>'),
+    '#prefix' => '<div id="tf_condition_text">',
+     '#suffix' => '</div>',
+    '#attributes' => array('class' => array('tf_or_condition')),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
    );
-   $form['project']['manual_curation']['time_to'] = array(
+    
+   $form['project']['manual_curation']['tf_condition_text']['time_from'] = array(
+      '#type' => 'date_popup',  
+      '#date_format' => 'm/d/Y',	  
+      '#title' => t(''),
+      '#attributes' => array('placeholder' => t('Start date')),	  
+      '#ajax' => array(
+           'callback' => 'datepopup_callback',
+           'wrapper' => 'tf_condition',
+      ),
+    );
+
+   $form['project']['manual_curation']['tf_condition_text']['time_to'] = array(
      '#type' => 'date_popup',
-     '#date_format' => 'd/m/Y',	  
+     '#date_format' => 'm/d/Y',	  
      '#attributes' => array('placeholder' => t('End date')),	  
      '#title' => t(''),  
-     '#required' => FALSE,	  
+     '#required' => FALSE,
+     '#ajax' => array(
+           'callback' => 'datepopup_callback',
+           'wrapper' => 'tf_condition',
+      ),	  
    );
+
+   $form['project']['manual_curation']['tf_condition1'] = array(
+     '#markup' => t('<div id="or_css">(OR)</div>'),
+   );
+  
+   $form['project']['manual_curation']['tf_condition'] = array(
+    '#type' => 'fieldset',
+    '#title' => t(''),
+    '#prefix' => '<div id="tf_condition">',
+    '#suffix' => '</div>',
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added 
+  );
+     $form['project']['manual_curation']['tf_condition']['no_timeframe'] = array(
+       '#type' => 'checkbox',
+       '#title' => t('There is no set time frame for curation.'),
+       '#default_value' => 0,
+       '#ajax' => array(
+           'callback' => 'no_timeframe_callback',
+           'wrapper' => 'tf_condition_text',
+       ),
+      '#limit_validation_errors' => array(),
+     );
+   if ( !empty($form_state['input']['time_to']['date']) || !empty($form_state['input']['time_from']['date'])) {
+     $form['project']['manual_curation']['tf_condition']['no_timeframe']['#attributes']['disabled'] = 'disabled';  
+   }
  }   
-  
-  
+    
   //Genome assembly information
   $form['assembly'] = array(
     '#type' => 'fieldset',
@@ -1475,7 +1596,7 @@ function assembly_data($form, &$form_state) {
   
   $form['upload_entry'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Assembly file information'),
+    '#title' => t('File information'),
     '#prefix' => '<div id="upload-fieldset-wrapper">',
     '#suffix' => '</div>',
     '#collapsible' => TRUE, // Added
@@ -1483,7 +1604,7 @@ function assembly_data($form, &$form_state) {
   );
   $form['upload_entry']['markup_text'] = array(
     '#prefix' => '<div id="assembly_files_markup">',
-    '#markup' => t('Please enter the name and md5sum of your assembly file(s). You will upload the files themselves to our ftp site, which we will send you the information for in a subsequent email.<br>'),
+    '#markup' => t('Please enter the name and md5sum of your file(s). If you do not have an md5sum for your file, enter NA (not recommended for larger files). We will send you information on how to share the files themselves in a subsequent email.<br>'),
     '#suffix' => '</div>'
   );
 
@@ -1543,10 +1664,10 @@ function assembly_data($form, &$form_state) {
  
   // Enabling honeypot to avoid spam
   honeypot_add_form_protection($form, $form_state, array('honeypot', 'time_restriction'));
-  $form['captcha'] = array(
+ /* $form['captcha'] = array(
     '#type' => 'captcha',
     '#captcha_type' => 'datasets/Math',
-  );
+  );*/
  
   $form['submit'] = array(
     '#type' => 'submit',
@@ -1603,15 +1724,27 @@ function assembly_data_validate($form, &$form_state) {
   if(!empty($values['need_assistance']) && ($values['need_assistance'] == 'Yes') && empty($values['reason'])) {
     form_set_error('reason', t('Reason field is required.')); 
   }  
- 
-  /*validate empty End date */  
-  if(!empty($values['is_curate_assembly']) && ($values['is_curate_assembly'] == 'Yes') && is_null($values['time_to'])) {  
+
+  /* TIME FRAME VALIDATIONS -- validate empty End date */  
+  if(!empty($values['is_curate_assembly']) && ($values['is_curate_assembly'] == 'Yes') && ($values['no_timeframe'] == 0) && !empty($values['time_from']) && is_null($values['time_to'])) {  
     form_set_error('time_to', t('End date field is required.'));
   }
-  
+
+  if(!empty($values['is_curate_assembly']) && ($values['is_curate_assembly'] == 'Yes') && ($values['no_timeframe'] == 0) && !empty($values['time_to']) && is_null($values['time_from'])) {
+    form_set_error('time_from', t('Start date field is required.'));
+  }
+
+
+  if ( ($values['is_curate_assembly'] == 'Yes') && is_null($values['time_to']) && is_null($values['time_from']) && empty($values['no_timeframe'])) {
+    form_set_error('time_from', t('Enter either one of the curation time frame.')); 
+  }
+ 
+  if ( ($values['is_curate_assembly'] == 'Yes') && (!empty($values['time_to']) || !empty($values['time_from'])) && !empty($values['no_timeframe'])) {
+    form_set_error('time_from', t('Enter either one of the curation time frame but not both.'));
+  }
  
   /*Validate End date greater than Start date*/
-  if(!empty($values['time_to']) && !empty($values['time_from']) && ($values['time_to'] < $values['time_from'])) {
+  if(!empty($values['time_to']) && !empty($values['time_from'])  && ($values['time_to'] < $values['time_from'])) {
     form_set_error('time_to', t('End date should be greater than Start date.'));
   }  
  
@@ -1626,10 +1759,6 @@ function assembly_data_validate($form, &$form_state) {
     form_set_error('publish_field_data', t('The field \'If '.$values['is_publish']).' '.$description.'\' is required');
   }
 
-  if(!empty($values['gender']) && ($values['gender'] == 'NA') && empty($values['other_gender'])) {
-    form_set_error('other_gender', t('Enter the other sex field value.'));
-  }
-  
   /*Data Source URL */
   if (!empty($values['data_source_url']) && !valid_url($values['data_source_url'], 'TRUE')) {
     form_set_error('data_source_url', t('You must enter a valid url.'));
@@ -1670,33 +1799,39 @@ function assembly_data_validate($form, &$form_state) {
 function assembly_data_submit($form, &$form_state) {
   global $user;
   $values = $form_state['values'];  
-  //echo "<pre>";print_r($values); exit;
+ // echo "<pre>"; print_r($values);echo "</pre>"; exit;
   $web_apollo_organism = variable_get('web_apollo_organism');
   if(!empty($web_apollo_organism)) {
     $organism_list = get_webapollo_organisms($web_apollo_organism);
   }
 
   $names = Array(); $data = Array();
-  $exclude_fields = Array('add_other_uploads', 'remove_other_uploads', 'submit', 'form_build_id', 'form_token', 'form_id', 'op','captcha_token','captcha_sid', 'captcha_response', 'i5kurl', 'honeypot_time','captcha');
+  $exclude_fields = Array('add_other_uploads', 'remove_other_uploads', 'submit', 'form_build_id', 'form_token', 'form_id', 'op','captcha_token','captcha_sid', 'captcha_response', 'url', 'honeypot_time','captcha');
   $filename = ''; $md5sum = '';
   foreach($values as $name => $value) {
     if(!in_array($name, $exclude_fields)) 
 	{
+       //echo "name ".$name." value ".$value."<br>";
 	  if(preg_match('/^filename_/', $name, $match)) {
 	    $filename .= check_plain($value).",";
 	  } 
 	  else if(preg_match('/^md5sum_/', $name, $match1)) {
 	    $md5sum .= check_plain($value).",";
 	  }
-	  else if(!preg_match('/^md5sum_/', $name, $match1) && !preg_match('/^filename_/', $name, $match)) {	  
-            array_push($names, $name);
-	    if($name == 'time_from' || $name == 'time_to') {
+	  else if ( !preg_match('/^md5sum_/', $name, $match1) && !preg_match('/^filename_/', $name, $match)) {	  
+            
+            array_push($names, $name);            
+            if ( ($name == 'time_from' || $name == 'time_to') && (!empty($value)) ) {   
 	      $dd = explode('-', check_plain($value));
-		  $dd_format = $dd[2].'-'.$dd[1].'-'.$dd[0];
+              $dd_format = $dd[2].'-'.$dd[1].'-'.$dd[0];
 	      $value = strtotime($dd_format);
 	    }
+            if ( is_null($value) && (( $name == 'time_from') || ($name == 'time_to')) ) {
+              $value = 0;
+            }
 	    array_push($data, "'".pg_escape_string(check_plain($value))."'");
 	  }
+ 
 	}	
 	
   }
@@ -1761,6 +1896,21 @@ function assembly_publish_dropdown_callback($form, $form_state) {
 
 function assembly_gender_dropdown_callback($form, $form_state) {
  return $form['assembly']['data_source']['gender_textfield'];  
+}
+
+function no_timeframe_callback($form, $form_state) {
+  if ($form_state['input']['no_timeframe'] == '1') {
+    $form['project']['manual_curation']['tf_condition_text']['time_from']['date']['#attributes']['disabled'] = 'disabled';
+    $form['project']['manual_curation']['tf_condition_text']['time_to']['date']['#attributes']['disabled'] = 'disabled';
+   }
+  return $form['project']['manual_curation']['tf_condition_text'];
+}
+
+function datepopup_callback($form, $form_state) {
+  if ( !empty($form_state['input']['time_to']['date']) || !empty($form_state['input']['time_from']['date'])) {
+    $form['project']['manual_curation']['tf_condition']['no_timeframe']['#attributes']['disabled'] = 'disabled'; 
+  }
+  return $form['project']['manual_curation']['tf_condition'];
 }
 
 /**
@@ -1995,12 +2145,18 @@ function gene_prediction($form, &$form_state) {
   
   $form['upload_entry'] = array(
     '#type' => 'fieldset',
-    '#title' => t('If you plan to upload your file to our ftp site, please provide the file name and an md5 checksum. If not, enter n/a.'),
+    '#title' => t('File Information'),
     '#prefix' => '<div id="upload-fieldset-wrapper">',
     '#suffix' => '</div>',
     '#collapsible' => TRUE, // Added
     '#collapsed' => FALSE,  // Added
   );
+    $form['upload_entry']['markup_text'] = array(
+    '#prefix' => '<div id="files_markup">',
+    '#markup' => t('Please enter the name and md5sum of your file(s). If you do not have an md5sum for your file, enter NA (not recommended for larger files). We will send you information on how to share the files themselves in a subsequent email.<br>'),
+    '#suffix' => '</div>'
+  );
+
 
   if (empty($form_state['pnum_upload'])) {
     $form_state['pnum_upload'] = 1;
@@ -2058,11 +2214,12 @@ function gene_prediction($form, &$form_state) {
   
   // Enabling honeypot to avoid spam
   honeypot_add_form_protection($form, $form_state, array('honeypot', 'time_restriction'));
+  /*
   $form['captcha'] = array(
     '#type' => 'captcha',
     '#captcha_type' => 'datasets/Math',
   );
-  
+  */
 
   $form['submit'] = array(
     '#type' => 'submit',
@@ -2159,7 +2316,7 @@ function gene_prediction_submit($form, &$form_state) {
   'descriptive_track','is_ogs','reason','other_methods','filename','md5sum','created');
   */
 
-  $exclude_fields = Array('i5kurl', 'honeypot_time', 'add_other_methods', 'remove_other_methods', 'add_other_uploads', 'remove_other_uploads', 'submit', 'form_build_id', 'form_token', 'form_id', 'op','captcha_token','captcha_sid', 'captcha_response', 'i5kurl', 'honeypot_time','captcha');
+  $exclude_fields = Array('i5kurl', 'honeypot_time', 'add_other_methods', 'remove_other_methods', 'add_other_uploads', 'remove_other_uploads', 'submit', 'form_build_id', 'form_token', 'form_id', 'op','captcha_token','captcha_sid', 'captcha_response', 'url', 'captcha');
   $names_col = Array();  
   $values_col = Array();
   $created = time(); $other_methods = ''; $filename = ''; $md5sum = '';
@@ -2167,17 +2324,17 @@ function gene_prediction_submit($form, &$form_state) {
   foreach($values as $key => $value) {
     if(!in_array($key, $exclude_fields)) {
       if(preg_match('/^other_methods_/', $key)) {              
-        $other_methods .= $value.",";
+        $other_methods .= check_plain($value).",";
       }
       else if(preg_match('/^filename_/', $key)) {
-        $filename .= $value.",";
+        $filename .= check_plain($value).",";
       }
       else if(preg_match('/^md5sum_/', $key)) {
-        $md5sum .= $value.",";
+        $md5sum .= check_plain($value).",";
       }
       else if(isset($value) && !empty($value)){            
        array_push($names_col, $key);
-       array_push($values_col, "'".$value."'");
+       array_push($values_col, "'".check_plain($value)."'");
       }	
     }
   }
@@ -2213,6 +2370,129 @@ function gene_prediction_submit($form, &$form_state) {
     drupal_set_message(t('Failed to send e-mail.'));
   } else
     drupal_set_message(t('Your gene prediction information is successfully submitted. For your reference we are sending out an email with the fields filled.'));
+}
+
+/**
+ *  Registration form for project or dataset submission account
+ */
+function project_dataset_submission_account($form, &$form_state) {
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'datasets') . '/css/project-dataset.css',
+  );
+
+  $form['information_markup'] = array(
+    '#markup' => t('<div id="info_markup">Fill out this form to tell us a bit about your project or dataset. Once we\'ve reviewed your message, we will set you up with an account so you can submit your data to us.</div>'),
+  );
+
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Your Name'),
+    '#required' => TRUE
+  );
+  $form['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('email'),
+    '#required' => TRUE
+  );
+  $form['affiliation'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Affiliation'),
+    '#required' => TRUE
+  );
+
+  $form['content'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Tell us about the data you want to submit or the project you want to start'),
+    '#required' => TRUE
+  );
+ 
+  
+  // Enabling honeypot to avoid spam
+  honeypot_add_form_protection($form, $form_state, array('honeypot', 'time_restriction'));
+  $form['captcha'] = array(
+    '#type' => 'captcha',
+    '#captcha_type' => 'datasets/Math',
+  );
+
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
+ 
+  return $form;
+
+}
+
+/**
+ *  hook_form_validate()
+ */
+function project_dataset_submission_account_validate($form, & $form_state) {
+   $values = $form_state['values'];
+   $name = $values['name'];
+
+  if (!preg_match('!^[\w @-]*$!', $name)){
+     form_set_error('name', t('Your Name can only contains numbers, letters @  -_.'));
+  }
+
+  if (!valid_email_address($values['email'])) {
+    form_set_error('email', t('You must enter a valid e-mail address.'));
+  }
+
+
+  $check_name_unique = db_select('ds_project_dataset_account')->fields('ds_project_dataset_account', array('psid'))->condition('name', db_like($values['name']), 'LIKE')->range(0, 1)->execute()->fetchField();
+  if (!empty($check_name_unique)) {
+    form_set_error('name', t('The name %name is already taken.', array('%name' => $values['name'])));
+  }
+
+
+  $check_email_unique =  db_select('ds_project_dataset_account')->fields('ds_project_dataset_account', array('psid'))->condition('email', db_like($values['email']), 'LIKE')->range(0, 1)->execute()->fetchField();
+  if (!empty($check_email_unique)) {
+    form_set_error('email', t('The e-mail address %email is already taken.', array('%email' => $values['email']))); 
+  }
+
+  $affiliation = $values['affiliation'];
+  if (!preg_match('!^[\w @-]*$!', $affiliation)){
+     form_set_error('affiliation', t('Your
+         Affiliation can only contains numbers, letters @  - _.'));
+  }
+
+}
+
+/**
+ * hook_form_submit()
+ */
+function project_dataset_submission_account_submit($form, & $form_state) {
+  $values = $form_state['values'];
+  // echo "<pre>"; print_r($values);echo "</pre>";
+
+  $created = time();
+  // data variable is used to send values to mail message
+  $data = Array(
+        'name' => check_plain($values['name']),
+        'email' => check_plain($values['email']),
+        'affiliation' => check_plain($values['affiliation']),
+        'content' => check_plain($values['content']),
+        'created' => $created
+      );
+
+  // drupal_write_record('ds_request_project', $data);
+  $result = db_insert('ds_project_dataset_account')->fields($data)->execute() or die("Unable to insert data");
+  if($result > 0) {
+    // E-mail address of the sender: as the form field is a text field.
+    $from = $values['email'];
+    $to_address = FROM_ADDRESS;
+
+    // Send the e-mail to the recipients using the site default language.
+    $sent =  drupal_mail('datasets', 'register_project_submission_account', $to_address, language_default(), $values, $from, TRUE);
+
+    if(empty($sent['result']) || ($sent['result'] != 1)) {
+      /*handle send fail, $sent ===false when mail fails, but it won't always recognize a failure*/
+      drupal_set_message(t('Failed to send e-mail.'));
+    } else
+      drupal_set_message(t('Thanks for registering for project or data submission account. Once we\'ve reviewed your data, we will set you up with an account so you can submit your data to us.'));
+    }
 }
 
 /**

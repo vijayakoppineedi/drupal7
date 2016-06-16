@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the fillpdf_feature feature.
+ */
+
+include_once 'fillpdf_feature.features.inc';

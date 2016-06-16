@@ -34,7 +34,10 @@ Reason: <?php print $data[0]->reason; ?> <br>
   $md5 = explode(',', $data[0]->md5sum);
   $file_md5sum = '';
   foreach($file as $key => $name) {
-	$file_md5sum .= "File name: ".$name."<br>md5sum: ".$md5[$key]."<br><br>";  
+     if(!empty($name))
+        $file_md5sum .= "File name: ".$name;
+    if(!empty($md5[$key]))
+       $file_md5sum .= "<br>md5sum: ".$md5[$key]."<br><br>";
   }
 ?>
 <?php print $file_md5sum; ?>

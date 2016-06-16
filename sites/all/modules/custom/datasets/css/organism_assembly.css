@@ -8,10 +8,14 @@
   min-width: 12.5%;
 }
 
-.project .form-item-description label,
-.project .form-item-organism-image-url label {
+.project .form-item-description label {
   float: left;
   min-width: 28%;
+}
+
+.project .form-item-organism-image-url label {
+  float: left;
+  width: 33.5%;
 }
 
 fieldset.project select,
@@ -152,8 +156,12 @@ fieldset.assembly select {
 
 #manual_curation .form-item-is-same label{
   float: left;
-  width: 54%;
+  width: 100%;
   font-weight: bold;
+}
+
+#manual_curation input[type="checkbox"] {
+  position: relative;
 }
 
 #manual_curation #name_email {
@@ -178,7 +186,7 @@ fieldset.assembly select {
 #gender_textfield label {  
   float: left;
   position: relative;
-  width: 17%;
+  width: 19.35%;
 }
 
 #gender_textfield fieldset {
@@ -301,11 +309,15 @@ div.container-inline-date .form-item-time-to-date > input {
 
 #assembly-data fieldset.panel {
   border: 0px;
-  box-shadow: 0px !important;
+  box-shadow: 0px 0px 0px 0px !important;
+  -moz-box-shadow: 0px !important!;
   -webkit-box-shadow: 0px !important;
 }
 
-#assembly-data .panel-body {
+#gender_textfield .panel-body,
+#assembly_publish .panel-body,
+#species .panel-body,
+#manual_curation .panel-body {
   padding: 0px !important;
 }
 
@@ -316,6 +328,30 @@ div.container-inline-date .form-item-time-to-date > input {
 #assembly_files_markup {
   font-family: Arial, sans-serif;
   font-weight: 600;
+}
+
+#tf_required {
+  color: red;
+  float: right;
+}
+
+.tf_or_condition  a {
+  font-size: 14px;
+  color: #333333;
+  font-weight: bold;
+  padding: 0px;
+}
+
+.tf_or_condition .panel-heading {
+  padding: 0px !important;
+}
+
+fieldset.tf_or_condition.panel {
+  margin-bottom: 0px;
+}
+
+#or_css {
+  margin-top: 10px;
 }
 
 @media (max-width: 1225px) {
@@ -343,7 +379,13 @@ div.container-inline-date .form-item-time-to-date > input {
   .m_class .form-item > input {
     width: 100%;
   }
-}
+  
+  .project .form-item-organism-image-url label {
+    width: 100%;
+  }
+  .form-item-is-curate-assembly label {
+    width: 100%;
+  }
 
 
 }

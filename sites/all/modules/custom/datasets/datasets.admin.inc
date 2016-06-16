@@ -51,7 +51,7 @@ function dataset_cordinator_organisms() {
   // Select table
   $query = db_select("ds_request_project", "rp");
   // Select fields
-  $query->fields("rp", array("id", "fullname", "email", "genus", "species", "genome_assembly_hosted", "involved_in_generation", "status", "created"));
+  $query->fields("rp", array("id", "fullname", "email", "genus", "species", "is_ncbi_submitted", "involved_in_generation", "status", "created"));
 
     // Set order by
   $query->orderBy($order, $sort);
@@ -82,7 +82,7 @@ function dataset_cordinator_organisms() {
     $rows[$i][] = $data->fullname;
 	$rows[$i][] = $data->email;
 	$rows[$i][] = $data->genus." ".$data->species;
-	$rows[$i][] = $data->genome_assembly_hosted;
+	$rows[$i][] = $data->is_ncbi_submitted;
 	$rows[$i][] = $data->involved_in_generation;
 	$status = '';
 	if($data->status == 1) $status = 'Approved';
@@ -117,10 +117,11 @@ function dataset_cordinator_organisms() {
  */ 
 function datasets_organism_approval($form, &$form_state, $id) { 
  $header = array(); 
- 
+  drupal_add_js(drupal_get_path('module', 'datasets') . '/js/organism_approval_status.js'); 
+
   // sql here
   $data = db_select('ds_request_project','rp')
-          ->fields('rp',array('id', 'fullname', 'email', 'genus', 'species', 'common_name', 'genome_assembly_hosted', 'is_ncbi_submitted', 'is_assembly', 'involved_in_generation', 'no_fund', 'description', 'status'))
+          ->fields('rp',array('id', 'fullname', 'email', 'genus', 'species', 'ncbi_taxid', 'common_name', 'genome_assembly_hosted', 'is_ncbi_submitted', 'is_assembly', 'involved_in_generation', 'description', 'status'))
 		  ->condition('rp.id',$id,'=')
           ->execute()->fetchObject();
   // Now build the form array
@@ -147,6 +148,10 @@ function datasets_organism_approval($form, &$form_state, $id) {
   $form['datasets_table']['species'] = array(
         '#type' => 'value',
         '#value' => $data->species,
+  );
+  $form['datasets_table']['ncbi_taxid'] = array(
+        '#type' => 'value',
+        '#value' => $data->ncbi_taxid,
   );
   $form['datasets_table']['common_name'] = array(
         '#type' => 'value',
@@ -188,6 +193,7 @@ function datasets_organism_approval($form, &$form_state, $id) {
     '#type' => 'radios',  	
     '#default_value' => $data->status,
     '#options' => array(t('Reject'), t('Approve')),
+    '#attributes' => array('onClick' => 'statusClick(this.value, "'.$data->genus.' '.$data->species.'")'),
   );
   $form['datasets_table']['id'] = array(	   
 	'#type' => 'value',
@@ -211,7 +217,6 @@ function datasets_organism_approval($form, &$form_state, $id) {
  */ 
 function datasets_organism_approval_submit($form, &$form_state) {
   $values = $form_state['values']['datasets_table'];
-  //echo "<pre>"; print_r($values);echo "</pre>";exit;
   $status = $values['status'];
   $id = $values['id'];  
   $to = $values['email'];  
@@ -223,24 +228,29 @@ function datasets_organism_approval_submit($form, &$form_state) {
           ->execute()->fetchField();
 		
   if($status_res != $status && $status == 1) {	
-     db_update('ds_request_project')
+    $genus = strtolower($values['genus']);
+    $species = strtolower($values['species']);
+     
+    /** Changing the status to TRUE **/
+    db_update('ds_request_project')
 		->fields(array('status' => $status))
 		->condition('id', $id, '=')
 		->execute();
    //   Send email to the user about the login credentials to the web apollo site
       $user_email_sent = drupal_mail('datasets', 'request_project_approved_email', $to, language_default(), $values, $from, TRUE);
+   
+     $is_species_exists = db_select('organism','o')->fields('o',array('organism_id'))->condition('o.genus',$genus,'LIKE')->condition('o.species', $species, 'LIKE')->execute()->fetchField();
+
+    if(!empty($is_species_exists)) {
+      drupal_set_message(t('This species "'.$genus.' '.$species.'" already exists in database.'));
+      return;
+    }
 
     // drupal_set_message(t('Successfully an email was sent to '.$values['email'].' regarding the status approved.'));
 
       /************************************************************
        ***********************************************************
        INSERT the approved request project 'organism' into  chado .*/
-     // sql here
- /*  $data = db_select('ds_request_project','rp')
-          ->fields('rp',array('id', 'fullname', 'email', 'genus', 'species', 'genome_assembly_hosted', 'is_ncbi_submitted', 'is_assembly', 'involved_in_generation', 'no_fund', 'description', 'status'))
-                  ->condition('rp.id',$id,'=')
-          ->execute()->fetchObject();
-*/
       $node = new stdClass();
       $node->type = "chado_organism";
       $node->language = "und";
@@ -261,7 +271,6 @@ function datasets_organism_approval_submit($form, &$form_state) {
       node_save(&$node);
 
       $organism_id = $node->organism->organism_id;
-//echo "<pre>"; print_r($node); echo "</pre>"; exit;
       $check_org_id = chado_get_id_from_nid('organism', $node->nid);
       if (!$check_org_id) {
         $record = new stdClass();
@@ -283,14 +292,15 @@ function datasets_organism_approval_submit($form, &$form_state) {
 	
 	//} 
 	//Displaying status message on the site
-   $status = ($status == 1)?'Approved': 'Rejected';  
-    drupal_set_message(t($values['genus']." ".$values['species']." status was changed to ".$status));
+      $status = ($status == 1)?'Approved': 'Rejected';  
+      drupal_set_message(t($values['genus']." ".$values['species']." status was changed to ".$status));
+     
   } else if($status == 0) {
     db_update('ds_request_project') // Table name no longer needs {}
 	  ->fields(array('status' => $status))
 	  ->condition('id', $id, '=')
 	  ->execute();
-
+/*
     $query = db_select('organism', 'o');
     // Select fields
     $query->fields("o", array("organism_id"));
@@ -320,6 +330,7 @@ function datasets_organism_approval_submit($form, &$form_state) {
     db_delete('organism')
       ->condition('organism_id', $oid, '=')
       ->execute();
+     */
 
     //Also removing rejected organism from the settings form - admin/structure/webapollo/settings
     $web_apollo_organism = variable_get('web_apollo_organism');

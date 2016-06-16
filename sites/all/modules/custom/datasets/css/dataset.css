@@ -22,8 +22,9 @@
 }
 
 #edit-organism,
-#edit-is-publish {
-  width: 43.6%;
+#edit-is-publish,
+#edit-gender {
+  width: 35.3%;
 }
 
 .form-item-geo-location {
@@ -102,7 +103,7 @@
 }
 
 #mapped-dataset select {
-  width: 44.5%;
+  width: 35.3%;
 }
 
 #mapped-dataset fieldset {
@@ -131,7 +132,7 @@ fieldset.panel-default > legend.panel-heading {
 }
 
 #gender_textfield fieldset > div {
-  margin-left: -22px;
+  margin-left: -5px;
 }
 
 #publish fieldset > div {
@@ -146,6 +147,10 @@ fieldset.panel-default > legend.panel-heading {
   color: red;
 }
 
+#files_markup {
+  font-family: Arial, sans-serif;
+  font-weight: 600;
+}
 
 @media (max-width: 1225px) {
   .m_class {
