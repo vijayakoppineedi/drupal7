@@ -1,0 +1,13 @@
+name = Web Apollo2
+description = Web apollo2 registration page
+package = Custom
+version = 1.0
+core = 7.x
+dependencies[] = web_apollo
+
+; Information added by Drupal.org packaging script on 2016-08-24
+version = "7.x-1.0"
+core = "7.x"
+project = "Custom"
+datestamp = "1472048587"
+
