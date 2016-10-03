@@ -865,7 +865,11 @@ function request_project_validate($form, &$form_state) {
     form_set_error('genus', t('The species "'.$genus.' '.$species.'" already existed in database.'));
     form_set_error('species');
   }
- 
+
+  if(!empty($form_state['values']['ncbi_taxid']) && !is_numeric($form_state['values']['ncbi_taxid'])) {
+    form_set_error('ncbi_taxid', t('NCBI Taxonomy ID should be a number'));
+  } 
+
 }
 
 /**
@@ -892,10 +896,10 @@ function request_project_submit($form, &$form_state) {
         'email' => check_plain($values['email']),
         'created' => $created
       );
-//echo "<pre>"; print_r($data); echo "</pre>";exit;
+  //echo "<pre>"; print_r($data); echo "</pre>";
   // drupal_write_record('ds_request_project', $data); 
   $result = db_insert('ds_request_project')->fields($data)->execute() or die("Unable to insert data");
-
+  //echo "after ";exit;
   //Send the e-mail to the recipients using the site default language.
   $to_user = $values['email'];
   $from_address = FROM_ADDRESS; 
@@ -2381,7 +2385,7 @@ function project_dataset_submission_account($form, &$form_state) {
   );
 
   $form['information_markup'] = array(
-    '#markup' => t('<div id="info_markup">Fill out this form to tell us a bit about your project or dataset. Once we\'ve reviewed your message, we will set you up with an account so you can submit your data to us.</div>'),
+    '#markup' => t('<div id="info_markup">Fill out this form to tell us a bit about your project or dataset. Once we\'ve reviewed your message, we will set you up with an account so you can submit your data to us. This account will NOT give you access to Apollo - For an Apollo account for manual curation, <a href="/web-apollo-registration" target="_NEW">register here</a>.</div>'),
   );
 
   $form['name'] = array(
