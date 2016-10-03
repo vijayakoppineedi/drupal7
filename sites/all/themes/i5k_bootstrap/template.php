@@ -9,7 +9,7 @@
 /**
  * VIJAYA - Implements hook_preprocess_search_results().
  */
-function i5k_preprocess_search_result(&$variables) {
+function i5k_bootstrap_preprocess_search_result(&$variables) {
   // If this search result is coming from our module, we want to improve the
   // template potential to make life easier for themers.
   if ($variables['module'] == 'apachesolr_search') {
@@ -31,9 +31,11 @@ function i5k_preprocess_search_result(&$variables) {
 function i5k_bootstrap_preprocess_page(&$variables) {
   //Overriding user login title
   if (arg(0) == 'user' && arg(1) == 'login') {
-    $variables['title'] = t('i5k Workspace login');
+    $variables['title'] = t('i5k Workspace login')."<br><div style='font-size: 20px; font-style: italic;'>This login form is NOT for the Apollo curation tool. To access Apollo, find the organism you'd like to annotate <a href='/available-genome-browsers' target='_NEW'>here</a>.</div>";
   } elseif (arg(0) == 'user' && arg(1) == '') {
     $variables['title'] = t('i5k Workspace login');
+  } elseif (arg(0) == 'image_permission' && arg(1) == 'new') {
+    $variables['title'] = t('Image use permission form');
   }
   // Add information about the number of sidebars.
   if (!empty($variables['page']['sidebar_first']) && !empty($variables['page']['sidebar_second'])) {

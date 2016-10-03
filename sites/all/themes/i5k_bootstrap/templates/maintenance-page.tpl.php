@@ -24,9 +24,10 @@
   <?php print $scripts; ?>
 
 <style>
-#logo {
+#logo img {
   float:left;
-  padding: 0 15px;
+  height: 50px;
+  padding: 20px 10px 0 0;
 }
 
 #name-and-slogan {

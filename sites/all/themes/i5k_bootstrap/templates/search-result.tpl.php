@@ -79,6 +79,6 @@
 	</h3>
   <?php print render($title_suffix); ?>
   <?php if ($snippet): ?>
-    <p class="search-result__snippet" <?php print $content_attributes; ?>><?php print $snippet; ?></p>
+    <p class="search-result__snippet" <?php print $content_attributes; ?>><?php print '...';//$snippet; ?></p>
   <?php endif; ?>
 </article>
