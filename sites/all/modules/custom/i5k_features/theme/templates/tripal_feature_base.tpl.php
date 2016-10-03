@@ -1,6 +1,5 @@
 <?php
 $feature  = $variables['node']->feature; 
-
 //VIJAYA - To retrieve synonym  data
 $options = array('return_array' => 1);
 $synonym = chado_expand_var($feature, 'table', 'feature_synonym', $options);
@@ -37,9 +36,10 @@ foreach($relationship['object']['part of'] as $key => $relationship_obj) {
   //Comment(s)    
   $comment = "None";  
   //type_id = 85 means a comment. "Note" value in field "name".
-  $gene_select = array('feature_id' => $feature->feature_id, 'type_id' => 85);
+   $gene_select = array('feature_id' => $feature->feature_id, 'type_id' => 85);
+ //  $gene_select = array('feature_id' => $feature->feature_id);
   $gene_columns = array('value', 'feature_id');
-  $gene_featureprop = chado_select_record('featureprop', $gene_columns, $gene_select);  
+ $gene_featureprop = chado_select_record('featureprop', $gene_columns, $gene_select);  
   if(isset($gene_featureprop) && !empty($gene_featureprop)) {
 	$i = 0; $comment = "";
 	foreach($gene_featureprop as $key => $gene_propobj) {
@@ -185,6 +185,23 @@ $rows[] = array(
    ),
    $comment
 );
+
+//VIJAYA - issue#112 from gitlabs - Displaying all the featureprop name value pairs
+  $sql = "select * from chado.featureprop fp, chado.cvterm c where fp.feature_id=:feature_id and c.cvterm_id=fp.type_id and c.cvterm_id!=85 order by c.cvterm_id asc";
+  $n = db_query($sql, array(':feature_id' => $feature->feature_id))->fetchAll();
+  $featureprop_name_value_pair = '';
+  if ($n) {
+    foreach($n as $n_key => $n_arr) {
+      $rows[] = array(
+        array(
+          'data' => $n_arr->name,
+          'header' => TRUE
+        ),
+        $n_arr->value
+      );
+    }
+  }
+
   
 }  //END of if condition for gene page
 else { 
@@ -285,7 +302,7 @@ print theme_table($table);
 ?>    
 
    <div class="organism-iframe">
-   <iframe src="<?php print $iframe_src; ?>" style="width: 100%; height: 650px" marginwidth="0" marginheight="0" frameborder="0" vspace="0" hspace="0" ></iframe>    
+  <!-- <iframe src="<?php print $iframe_src; ?>" style="width: 100%; height: 650px" marginwidth="0" marginheight="0" frameborder="0" vspace="0" hspace="0" ></iframe>    -->
    </div>
 
 

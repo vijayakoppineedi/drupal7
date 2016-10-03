@@ -421,6 +421,24 @@ if (count($object_rels) > 0 or count($subject_rels) > 0) { ?>
         ),
         $user_comment
       );
+      
+    //VIJAYA - issue#112 from gitlabs - Displaying all the featureprop name value pairs
+    $sql = "select * from chado.featureprop fp, chado.cvterm c where fp.feature_id=:feature_id and c.cvterm_id=fp.type_id and c.cvterm_id!=85 order by c.cvterm_id asc";
+    $n = db_query($sql, array(':feature_id' => $featureprop_id))->fetchAll();
+    $featureprop_name_value_pair = '';
+    if ($n) {
+      foreach($n as $n_key => $n_arr) {
+        $rows[] = array(
+          array(
+            'data' => $n_arr->name,
+            'header' => TRUE
+          ),
+          $n_arr->value
+        );
+      }
+    }
+
+
       $table = array(
         'header' => $headers,
         'rows' => $rows,
