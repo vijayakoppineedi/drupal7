@@ -45,7 +45,7 @@
   left: 254px;
 }
 
-.grippie {
-  width: 477px !important;
+#request-project .resizable-textarea .grippie {
+  width: 40.7%;
   margin-left: 0px !important;
 }
