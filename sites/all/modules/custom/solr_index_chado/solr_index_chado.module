@@ -1,4 +1,5 @@
 <?php
+// User comments
 define('NOTE_TYPE_ID', 85);
 
 /**
@@ -146,7 +147,7 @@ function solr_index_chado_apachesolr_index_document_build_node(ApacheSolrDocumen
   else if($node->type == 'chado_analysis') {
     $document->program = $node->analysis->program;
   }
-
+//echo "text ".$text;exit;
   $documents = array();
   $documents[] = $document;
   return $documents;
