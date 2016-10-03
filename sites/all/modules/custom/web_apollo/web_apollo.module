@@ -50,9 +50,8 @@ function web_apollo_menu() {
   );
   
   $items['admin/structure/webapollo/users'] = array(
-    'title' => 'Users List',
+    'title' => 'Web apollo1 Users',
     'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10
   );
   
   $items['admin/structure/webapollo/settings'] = array(
@@ -343,9 +342,11 @@ function web_apollo_mail($key, &$message, $params) {
       $message['body'][] = '<br><br><b>Username: </b>'.$params['email'];  
       $message['body'][] = '<br><br><b>Password: </b>'.$params['pass'];
       $message['body'][] =  '<Br><Br>Web Apollo Site:<br> https://apollo.nal.usda.gov/'.$params['organism_key']; 
-      $message['body'][] =  '<br><br>Annotation guidelines:<bR> http://genomearchitect.org/web_apollo_user_guide';
+      $message['body'][] = '<bR><br>The Apollo software is collaborative - many annotators from different labs, universities, and even countries work together on improving the annotations of a genome assembly. We thank you for joining this community!<bR>';
+      $message['body'][] = 'If you notice that your gene is already in the user-created annotations track, this means that another annotator is already working on it. You can hover over the model to see who the annotator is. Before you work on the model, please get in touch with this annotator, so you can improve the annotation together. If you don\'t know how to reach the annotator, get in touch with us (i5k@ars.usda.gov), and we\'ll help.';
+      $message['body'][] =  '<br><br>Annotation guidelines:<bR> http://genomearchitect.org/users-guide';
       $message['body'][] =  '<bR>We would appreciate it if you followed these annotation rules:<br>';
-      $message['body'][] = 'http://i5k.nal.usda.gov/content/rules-web-apollo-annotation-i5k-pilot-project';
+      $message['body'][] = 'http://i5k.nal.usda.gov/rules-web-apollo-annotation-i5k-pilot-project';
       $message['body'][] = '<br><br>We recommend using our BLAST resources (https://i5k.nal.usda.gov/blast) to navigate to a particular scaffold. In the BLAST Query page, select the genome assembly as the subject. In the bottom left panel of the BLAST results page, there will be a link-out from each HSP to the appropriate Web Apollo instance. The BLAST HSPs will be displayed as a track in the browser. For a detailed tutorial of out BLAST resources, see https://i5k.nal.usda.gov/content/blast-tutorial.';
       $message['body'][] = '<br><br>Finally, you will be automatically subscribed to a low-volume Web Apollo mailing list, which we use to communicate network outages during which Web Apollo will not be available, updates, and other important messages:<br><br>';
       $message['body'][] = 'http://listserv.nal.usda.gov/cgi-bin/wa?A0=webapollo-users';
@@ -370,19 +371,18 @@ function web_apollo_mail($key, &$message, $params) {
  */
 function get_webapollo_organisms($web_apollo_organism, $annotation = 0) {
   $organism_values = preg_split ('/$\R?^/m', $web_apollo_organism);
-  
   $organism_data = array('' => 'Select one or multiple organisms');
   for($i=0; $i < count($organism_values); $i++) {
     $temp = explode('|', $organism_values[$i]);	
-	if($annotation == 1) {
-	  if($temp[2] == 1)
-        $organism_data[$temp[0]] = $temp[1];	
-	} else {
+	if($annotation == 1 && $temp[2] == 1) {
+          $organism_data[$temp[0]] = $temp[1];	
+	} else if($annotation == 2 && $temp[2] == 2) {
+          $organism_data[$temp[0]] = $temp[1];
+        } else if($temp[2] == 0) {
 	  $organism_data[$temp[0]] = $temp[1];	
 	}
 
   }  
-	
   return $organism_data;
 }
 

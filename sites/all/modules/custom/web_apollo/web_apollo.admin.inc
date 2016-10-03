@@ -16,7 +16,7 @@ function web_apollo_admin($form, &$form_state) {
   $form['web_apollo_organism'] = array('#type' => 'textarea',
     '#title' => t('Organism(s)'),
     '#default_value' => $web_apollo_organism,
-    '#description' => t("The possible values this field can contain. Enter one value per line, in the format key|label."),
+    '#description' => t("The possible values this field can contain. Enter one value per line, in the format key|label|flag. Flag - 1 organisms will be in web apollo registration form. Flag - 2 organisms will be shown in web apollo2 registration."),
     '#required' => TRUE,
   );
   
@@ -336,11 +336,11 @@ function webapollo_user_approval_submit($form, &$form_state) {
     if(!$user_email_sent) {	  
       drupal_set_message(t('Failed to send the email due to some technical problems'));	  
     } else {
-	  db_update('webapollo_users') // Table name no longer needs {}
+      db_update('webapollo_users') // Table name no longer needs {}
 		->fields(array('status' => $status))
 		->condition('uid', $uid, '=')
 		->execute();
-     drupal_set_message(t('Successfully an email was sent to '.$values['email'].' regarding the status approved.'));
+      drupal_set_message(t('Successfully an email was sent to '.$values['email'].' regarding the status approved.'));
     }
 	
     //Displaying status message on the site
@@ -348,11 +348,11 @@ function webapollo_user_approval_submit($form, &$form_state) {
     drupal_set_message(t($form_state['values']['web_apollo_table']['name']."'s status was changed to ".$status));    
   } // Status approved condition ends here
   else if($status == 0) {
-       db_update('webapollo_users') // Table name no longer needs {}
+     db_update('webapollo_users') // Table name no longer needs {}
 		->fields(array('status' => $status))
 		->condition('uid', $uid, '=')
 		->execute();
-	  drupal_set_message(t($values['name'].' has been rejected by  the admin due to some reasons.'));
+     drupal_set_message(t($values['name'].' has been rejected by  the admin due to some reasons.'));
   }   
   /**********************************************/ 
   
