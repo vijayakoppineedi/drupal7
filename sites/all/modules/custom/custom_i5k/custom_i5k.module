@@ -34,9 +34,15 @@ function custom_i5k_menu() {
  */
 function custom_i5k_menu_alter(&$items)
 {
-   unset($items['user/password']);
+   //VIJAYA - unset the user password link
+ //  unset($items['user/password']);
    $items['image_permission/new'] = $items['node/add/fillpdf-form'];
    unset($items['node/add/fillpdf-form']);
+
+    //VIJAYA - Disabling the user view and edit profiles.
+   #$items['user/%user/edit']['access arguments'] = array('administer user');
+   #$items['user/%user/edit']['access callback'] = 'user_access';
+
 }
 
 /**
@@ -169,21 +175,31 @@ function custom_i5k_form_alter(&$form, &$form_state, $form_id) {
     $form['gff_file']['#maxlength'] = 256;	
   } else if($form_id == 'contact_site_form') {
     $form['#validate'][] = 'custom_contact_form_validate';
-  } else if($form_id == 'user_pass') {    
-    $form = Array();
-    form_set_error("", "Access Denied.");
+  } else if ($form_id == 'user_profile_form') {
+    $form['contact']['#access'] = FALSE;
   } else if($form_id == 'user_login') {
     drupal_add_css(drupal_get_path('module', 'custom_i5k') . '/theme/css/user_login.css');
     $form['contact_text'] = array(
           '#type' => 'item',
-          '#markup' => '<div id="user_contact_text_css">Don\'t have an account? <a href=\'/contact\'>Contact us</a> if you\'d like to submit data to us and need an account.</div>',
+          '#markup' => '<div id="user_contact_text_css">Don\'t have an account? <a href=\'/register/project-dataset/account\'>Contact us</a> if you\'d like to submit data to us and need an account.</div>',
           '#weight' => 101,
     );
     $user_login_final_validate_index = array_search('user_login_final_validate', $form['#validate']);
     if ($user_login_final_validate_index >= 0) {
       $form['#validate'][$user_login_final_validate_index] = 'custom_user_login_final_validate';
     }
-  } 
+   
+  }
+/* else if($form_id == 'fillpdf_form_node_form') {
+      //echo "<pre>"; print_r($form); echo "</pre>";
+     $form['field_photographer']['und'][0]['#title'] = 'Photographer/Author';
+     $form['#title'] = 'Image use permission form';
+     $form['fillpdf_header'] = array(
+        '#type' => 'item',
+        '#markup' => '<div><h5>If you are sending us an image that you generated yourself, please fill out this form, sign the resulting pdf, and send it back to <a href="mailto:i5k@ars.usda.gov">i5k@ars.usda.gov</a> to ensure that we have permission to display your image on your organism page.</h5></div>',
+        '#weight' => -1,
+     );
+  } */
 
  return $form; 
 }
@@ -458,7 +474,9 @@ function custom_i5k_update_7110(&$sandbox) {
  return t('Updated all gene page urls to the geneId');
 }
  
-
+/**
+ * VIJAYA - changed the "Contact i5k@ars.usda.gov if you\'ve forgotten your username or password"
+*/
 
 function custom_user_login_final_validate($form, &$form_state) {
   if (empty($form_state['uid'])) {
@@ -483,6 +501,7 @@ function custom_user_login_final_validate($form, &$form_state) {
       // exactly what the user typed in. $form_state['values']['name'] may have
       // been modified by validation handlers that ran earlier than this one.
       $query = isset($form_state['input']['name']) ? array('name' => $form_state['input']['name']) : array();
+       //VIJAYA 
       form_set_error('name', t('Contact i5k@ars.usda.gov if you\'ve forgotten your username or password'));
       watchdog('user', 'Login attempt failed for %user.', array('%user' => $form_state['values']['name']));
     }
