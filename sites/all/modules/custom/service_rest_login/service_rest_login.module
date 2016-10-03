@@ -56,6 +56,7 @@ function insert_before_login_submit($form, &$form_state) {
   $pass = $values['pass'];  
 
   //$base_url = 'http://stage-www-u.lcacommons.gov/rest';
+  // djnago application api url for user login
   $base_url = 'http://gmod-dev.nal.usda.gov/webapp/web_login?username='.$name.'&password='.$pass;
 
   $data = array();
