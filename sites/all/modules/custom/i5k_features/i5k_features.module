@@ -120,7 +120,7 @@ function push_cds_data($value, $unspliced) {
   if($unspliced == 1) {
     if(!empty($value->residues)) {
        $popup_str = "popup_message_display_popup(".$value->feature_id.", '".$value->typename."', 680, 300,'".$unspliced."','".$value->strand."')";	
-       $view_sequence = "<a href='#' onclick=\"".$popup_str."\">Fasta vj..</a>";	  
+       $view_sequence = "<a href='#' onclick=\"".$popup_str."\">Fasta</a>";	  
     } 
   }
   else if($unspliced == 0) {
@@ -303,7 +303,6 @@ function zclip_data($fid_type) {
   
       $residues = '';   $title = ''; $popup = '';
       foreach($query as $result) {  
-//echo "<pre>"; print_r($result); echo "</prE>";
         $title = $result->uniquename.":".$type; 
         $residues = $result->residues;	
       }  // foreach closing
