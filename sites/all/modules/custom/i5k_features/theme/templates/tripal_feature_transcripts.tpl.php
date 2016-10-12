@@ -501,31 +501,35 @@ if (count($object_rels) > 0 or count($subject_rels) > 0) { ?>
 	       $strand = '[-]';
 	
 	     /*
-		   Below if condition sequence are polypeptide, exon.
-		         else condition sequence are three_prime_UTR, five_prime_UTR etc.,
+		   Below if condition sequence are polypeptide.
+		         else condition sequence are exon, three_prime_UTR, five_prime_UTR etc.,
                  in else condition adding 1 to the unspliced parameter to differentiate. 				 
   		   View Fasta - popup_message_display_popup(feature_id, type, width, height, unspliced, strand)
 		 */
-	     if(!empty($result->residues))	
-	       $view_sequence = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300, '0', '".$result->strand."');\">Fasta</a>";
-	     else {
-		   $unspliced = 1;
-           $view_sequence = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300, '".$unspliced."', '".$result->strand."');\">Fasta</a>";	
-		 }
-		 
-		 $seq_query = db_query("select f.name from chado.featureloc fc, chado.feature f where fc.srcfeature_id=f.feature_id and fc.srcfeature_id=:srcfid", array(':srcfid' => $result->srcfeature_id));
-         foreach($seq_query as $seq_result) {		 
-		   $seq_name = $seq_result->name;
-         } 
-		 
-		 $data[$i][0] = array('data' =>$result->typename, 'width' => '10%');  
-		 $data[$i][1] = array('data' =>$seq_name, 'width' => '10%');  
-		 $data[$i][2] = array('data' =>$fmin, 'width' => '10%');  
-		 $data[$i][3] = array('data' =>$fmax, 'width' => '10%');  
-		 $data[$i][4] = array('data' =>$strand, 'width' => '10%');  
-		 $data[$i][5] = array('data' =>$view_sequence, 'width' => '10%'); 	  	
-		 
-		 }
+             $view_sequence = '-';
+             if ($result->cvterm_id == PEP_TYPE_ID && (!empty($result->residues)) ) {
+                 $view_sequence = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300, '0', '".$result->strand."');\">Fasta</a>";
+             } else {  // else condition is not for polypeptide and it is for other tranascripts
+	       if($result->cvterm_id != PEP_TYPE_ID && !empty($result->residues))	
+	         $view_sequence = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300, '0', '".$result->strand."');\">Fasta</a>";
+	       else if ($result->cvterm_id != PEP_TYPE_ID) {
+	         $unspliced = 1;
+                 $view_sequence = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300, '".$unspliced."', '".$result->strand."');\">Fasta</a>";	
+  	       }
+	     }	 
+	      $seq_query = db_query("select f.name from chado.featureloc fc, chado.feature f where fc.srcfeature_id=f.feature_id and fc.srcfeature_id=:srcfid", array(':srcfid' => $result->srcfeature_id));
+              foreach($seq_query as $seq_result) {		 
+  	        $seq_name = $seq_result->name;
+              } 
+	 
+	      $data[$i][0] = array('data' =>$result->typename, 'width' => '10%');  
+	      $data[$i][1] = array('data' =>$seq_name, 'width' => '10%');  
+	      $data[$i][2] = array('data' =>$fmin, 'width' => '10%');  
+	      $data[$i][3] = array('data' =>$fmax, 'width' => '10%');  
+	      $data[$i][4] = array('data' =>$strand, 'width' => '10%');  
+	      $data[$i][5] = array('data' =>$view_sequence, 'width' => '10%'); 	  	
+	 
+	 }
 		 $i++;
        }   
 	

@@ -298,11 +298,11 @@ print theme_table($table);
   $nav = '&tracklist=1&overview=0';
 
   $iframe_src = $iframe_src . $nal_abbreviation . "/jbrowse/?loc=" . $iframe_location .$nav. "&tracks=DNA%2CAnnotations%2C" . $current_model."&hightlight";  
-  //print $iframe_src;
+ // print $iframe_src;
 ?>    
 
    <div class="organism-iframe">
-  <!-- <iframe src="<?php print $iframe_src; ?>" style="width: 100%; height: 650px" marginwidth="0" marginheight="0" frameborder="0" vspace="0" hspace="0" ></iframe>    -->
+    <!-- <iframe src="<?php print $iframe_src; ?>" style="width: 100%; height: 650px" marginwidth="0" marginheight="0" frameborder="0" vspace="0" hspace="0" ></iframe>   -->
    </div>
 
 

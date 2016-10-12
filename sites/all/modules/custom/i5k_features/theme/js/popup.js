@@ -84,7 +84,7 @@ function popup_message_display_popup(fid, type, width, height, unspliced, strand
   if(fmin && fmax) {  
     popup_title = (unspliced == '1')?(fid+"-"+type+"-"+strand+"-"+unspliced):(fid+"-"+type+"-"+strand+"-"+unspliced+"-"+fmin+"-"+fmax);	  	
   } else {
-    popup_title = (unspliced == '1')?(fid+"-"+type+"-"+strand+"-"+unspliced):(fid+"-"+type+"-"+strand);	  
+    popup_title = (unspliced == '1')?(fid+"-"+type+"-"+strand+"-"+unspliced):(fid+"-"+type+"-"+strand+"-"+unspliced);	  
   }
   jQuery.ajax({
     type: 'POST',
@@ -105,7 +105,7 @@ function popup_message_display_popup(fid, type, width, height, unspliced, strand
         popup_message_disable_popup();
 	    jQuery(".l-region--navigation a:visited").css({"background":"none"}); 
 	    jQuery(".l-region--navigation").css({"display":"block"});
-      });
+     });
       // Click out event!
       jQuery("#popup-message-background").click(function() {
         jQuery('#popup-window').text('');

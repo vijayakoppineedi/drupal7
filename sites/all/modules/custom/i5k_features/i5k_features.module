@@ -120,7 +120,7 @@ function push_cds_data($value, $unspliced) {
   if($unspliced == 1) {
     if(!empty($value->residues)) {
        $popup_str = "popup_message_display_popup(".$value->feature_id.", '".$value->typename."', 680, 300,'".$unspliced."','".$value->strand."')";	
-       $view_sequence = "<a href='#' onclick=\"".$popup_str."\">Fasta</a>";	  
+       $view_sequence = "<a href='#' onclick=\"".$popup_str."\">Fasta vj..</a>";	  
     } 
   }
   else if($unspliced == 0) {
@@ -174,7 +174,7 @@ function i5k_features_feature_alignments($variables) {
  
 /**
  * push data for gene, level2 [mRNA, etc.,] and level2 unspliced - in Detail transcript view page
- */
+ s*/
 function push_data($value, $unspliced) { 
   $data = array();
   $level1 = array('gene', 'pseudogene');
@@ -223,7 +223,7 @@ function zclip_data($fid_type) {
   $type = $fid_type[1];
   $strand = $fid_type[2]; 
   $unspliced = $fid_type[3];   
-  
+
   if(!empty($fid_type[4])) $fmin = $fid_type[4];
   if(!empty($fid_type[5])) $fmax = $fid_type[5];
   
@@ -303,10 +303,10 @@ function zclip_data($fid_type) {
   
       $residues = '';   $title = ''; $popup = '';
       foreach($query as $result) {  
+//echo "<pre>"; print_r($result); echo "</prE>";
         $title = $result->uniquename.":".$type; 
         $residues = $result->residues;	
       }  // foreach closing
-	  
     } // else closing
     
   } // else closing

@@ -68,7 +68,7 @@ if (count($object_rels) > 0 or count($subject_rels) > 0) { ?>
 	
         $query = db_query("select fr.subject_id, fr.object_id, fr.type_id, c.name as typename from  chado.feature_relationship fr, chado.feature f, chado.featureloc fc, chado.cvterm  c where f.feature_id=fr.subject_id and fc.feature_id=f.feature_id and f.type_id=c.cvterm_id and fr.object_id=:fid and c.cvterm_id=".$type_id_pep."", array(':fid' => $fid));    
         foreach($query as $result) {                  
-	      $pep_link = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300);\">Peptide Fasta</a>"; 		
+	      $pep_link = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300);\">Peptide Fasta......</a>"; 		
         } 		
 		  
         $rows[] = array(
@@ -152,10 +152,14 @@ if (count($object_rels) > 0 or count($subject_rels) > 0) { ?>
 		
 	      $type_id_pep = PEP_TYPE_ID; //'324';
 		
-          $query = db_query("select fr.subject_id, fr.object_id, fr.type_id, c.name as typename, fc.strand from  chado.feature_relationship fr, chado.feature f, chado.featureloc fc, chado.cvterm  c where f.feature_id=fr.subject_id and fc.feature_id=f.feature_id and f.type_id=c.cvterm_id and fr.object_id=:fid and c.cvterm_id=".$type_id_pep." order by c.name", array(':fid' => $fid));
-		
+          $query = db_query("select fr.subject_id, fr.object_id, fr.type_id, c.name as typename, f.residues, fc.strand from  chado.feature_relationship fr, chado.feature f, chado.featureloc fc, chado.cvterm  c where f.feature_id=fr.subject_id and fc.feature_id=f.feature_id and f.type_id=c.cvterm_id and fr.object_id=:fid and c.cvterm_id=".$type_id_pep." order by c.name", array(':fid' => $fid));
+          $pep_link = '-'; 		
           foreach($query as $result) {
-            $pep_link = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300, '0', '".$result->strand."');\">Peptide Fasta</a>"; 		   }			
+             if (!empty($result->residues))
+              $pep_link = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300, '0', '".$result->strand."');\">Peptide Fasta</a>";
+          /*  else
+               $pep_link = "<a href='#' onclick=\"popup_message_display_popup(".$result->subject_id.", '".$result->typename."', 680, 300, '1', '".$result->strand."');\">Peptide Fasta..</a>";        */
+          }			
 		
           $rows[] = array(
             array('data' =>$subject->record->subject_id->uniquename, 'width' => '30%'),     $genomic_link,
